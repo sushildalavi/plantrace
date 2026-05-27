@@ -111,7 +111,7 @@ class QueryPlan(Base):
 class QueryRegression(Base):
     __tablename__ = "query_regressions"
     __table_args__ = (
-        CheckConstraint("severity IN ('high','medium','low')", name="ck_regression_severity"),
+        CheckConstraint("severity IN ('critical','high','medium','low')", name="ck_regression_severity"),
         Index("ix_query_regressions_severity_created", "severity", "created_at"),
         Index("ix_query_regressions_fp_created", "fingerprint_id", "created_at"),
         {"schema": SCHEMA},
@@ -156,3 +156,23 @@ class QueryReport(Base):
     )
 
     fingerprint: Mapped[QueryFingerprint] = relationship(back_populates="reports")
+
+
+class CollectorStatus(Base):
+    __tablename__ = "collector_status"
+    __table_args__ = (
+        Index("ix_collector_status_service_seen", "service_id", "last_seen_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    service_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    environment: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    database_name: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="ok")
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )

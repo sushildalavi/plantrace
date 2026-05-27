@@ -61,6 +61,7 @@ def run(iterations: int, drop_index: bool, restore_index: bool, seed: int = 0) -
                 log.warning("dropping demo.orders_user_id_idx (regression incoming)")
                 with conn.begin():
                     conn.execute(text("DROP INDEX IF EXISTS demo.orders_user_id_idx"))
+                    conn.execute(text("DROP INDEX IF EXISTS demo.vector_items_embedding_hnsw_idx"))
 
             name = _pick(rng)
             sql = QUERIES[name].format(**_params(rng))

@@ -1,22 +1,11 @@
-"""Pure regression rules over (prev_metric, new_metric, prev_plan, new_plan).
-
-The collector calls this and persists whatever comes back. No DB access here.
-Each rule produces a dict with severity / type / message / serialized snapshots.
-Severity precedence: when both ``latency_spike`` and ``severe_latency_spike``
-would fire, only the severe one is emitted (highest severity wins).
-"""
+"""Pure regression rules over (prev_metric, new_metric, prev_plan, new_plan)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
 
-LATENCY_RATIO_MEDIUM = 1.5
-LATENCY_RATIO_HIGH = 3.0
-ROW_ESTIMATE_RATIO = 10.0
-TEMP_BLKS_DELTA = 1000
-CALL_RATIO = 2.0
-COST_RATIO = 2.0
+from app.config import settings
 
 
 @dataclass
@@ -55,6 +44,8 @@ def detect_regressions(
     new_metric: MetricSnapshot | None,
     prev_plan: PlanSnapshot | None,
     new_plan: PlanSnapshot | None,
+    *,
+    is_vector_query: bool = False,
 ) -> list[dict[str, Any]]:
     if new_metric is None:
         return []
@@ -66,31 +57,23 @@ def detect_regressions(
     severe_latency = False
     if prev_metric and prev_metric.mean_ms > 0:
         ratio = new_metric.mean_ms / prev_metric.mean_ms
-        if ratio > LATENCY_RATIO_HIGH:
+        if ratio >= settings.REGRESSION_LATENCY_RATIO_HIGH:
             severe_latency = True
             out.append(
                 {
                     "severity": "high",
                     "regression_type": "severe_latency_spike",
-                    "message": (
-                        f"mean execution time increased severely from "
-                        f"{prev_metric.mean_ms:.1f}ms to {new_metric.mean_ms:.1f}ms "
-                        f"({ratio:.1f}x)"
-                    ),
+                    "message": f"mean execution time increased severely from {prev_metric.mean_ms:.1f}ms to {new_metric.mean_ms:.1f}ms ({ratio:.1f}x)",
                     "old_metric_json": old_json,
                     "new_metric_json": new_json,
                 }
             )
-        elif ratio > LATENCY_RATIO_MEDIUM:
+        elif ratio >= settings.REGRESSION_LATENCY_RATIO_MEDIUM:
             out.append(
                 {
                     "severity": "medium",
                     "regression_type": "latency_spike",
-                    "message": (
-                        f"mean execution time increased from "
-                        f"{prev_metric.mean_ms:.1f}ms to {new_metric.mean_ms:.1f}ms "
-                        f"({ratio:.1f}x)"
-                    ),
+                    "message": f"mean execution time increased from {prev_metric.mean_ms:.1f}ms to {new_metric.mean_ms:.1f}ms ({ratio:.1f}x)",
                     "old_metric_json": old_json,
                     "new_metric_json": new_json,
                 }
@@ -103,34 +86,35 @@ def detect_regressions(
         and new_plan.uses_seq_scan
         and not new_plan.uses_index_scan
     ):
-        msg = "query plan changed from index scan to sequential scan"
-        if prev_metric and new_metric and prev_metric.mean_ms > 0:
-            msg += f"; mean latency went from {prev_metric.mean_ms:.1f}ms to {new_metric.mean_ms:.1f}ms"
         out.append(
             {
                 "severity": "high",
                 "regression_type": "index_scan_to_seq_scan",
-                "message": msg,
+                "message": "query plan changed from index scan to sequential scan",
                 "old_metric_json": old_json,
                 "new_metric_json": new_json,
             }
         )
 
-    if (
-        new_plan is not None
-        and new_plan.actual_rows is not None
-        and new_plan.estimated_rows is not None
-    ):
+    if is_vector_query and prev_plan and new_plan and prev_plan.uses_index_scan and new_plan.uses_seq_scan:
+        out.append(
+            {
+                "severity": settings.REGRESSION_HNSW_SEVERITY,
+                "regression_type": "vector_hnsw_index_bypass",
+                "message": "vector query plan regressed from index-assisted access to sequential scan",
+                "old_metric_json": old_json,
+                "new_metric_json": new_json,
+            }
+        )
+
+    if new_plan and new_plan.actual_rows is not None and new_plan.estimated_rows is not None:
         ratio = new_plan.actual_rows / max(new_plan.estimated_rows, 1)
-        if ratio > ROW_ESTIMATE_RATIO:
+        if ratio >= settings.REGRESSION_ROW_ESTIMATE_RATIO:
             out.append(
                 {
                     "severity": "medium",
                     "regression_type": "row_estimate_mismatch",
-                    "message": (
-                        f"row estimate off by {ratio:.1f}x: "
-                        f"actual {new_plan.actual_rows} vs estimated {new_plan.estimated_rows}"
-                    ),
+                    "message": f"row estimate off by {ratio:.1f}x: actual {new_plan.actual_rows} vs estimated {new_plan.estimated_rows}",
                     "old_metric_json": old_json,
                     "new_metric_json": new_json,
                 }
@@ -138,7 +122,7 @@ def detect_regressions(
 
     if prev_metric is not None:
         delta = new_metric.temp_blks_written - prev_metric.temp_blks_written
-        if delta > TEMP_BLKS_DELTA:
+        if delta >= settings.REGRESSION_TEMP_BLKS_DELTA:
             out.append(
                 {
                     "severity": "medium",
@@ -151,15 +135,12 @@ def detect_regressions(
 
     if not severe_latency and prev_metric and prev_metric.calls > 0:
         ratio = new_metric.calls / prev_metric.calls
-        if ratio > CALL_RATIO:
+        if ratio >= settings.REGRESSION_CALL_RATIO:
             out.append(
                 {
                     "severity": "low",
                     "regression_type": "call_spike",
-                    "message": (
-                        f"call count increased from {prev_metric.calls} to "
-                        f"{new_metric.calls} ({ratio:.1f}x)"
-                    ),
+                    "message": f"call count increased from {prev_metric.calls} to {new_metric.calls} ({ratio:.1f}x)",
                     "old_metric_json": old_json,
                     "new_metric_json": new_json,
                 }
@@ -173,19 +154,17 @@ def detect_regressions(
         and prev_plan.estimated_total_cost > 0
     ):
         ratio = new_plan.estimated_total_cost / prev_plan.estimated_total_cost
-        if ratio > COST_RATIO:
+        if ratio >= settings.REGRESSION_COST_RATIO:
             out.append(
                 {
                     "severity": "medium",
                     "regression_type": "cost_spike",
-                    "message": (
-                        f"estimated plan cost increased from "
-                        f"{prev_plan.estimated_total_cost:.1f} to "
-                        f"{new_plan.estimated_total_cost:.1f} ({ratio:.1f}x)"
-                    ),
+                    "message": f"estimated plan cost increased from {prev_plan.estimated_total_cost:.1f} to {new_plan.estimated_total_cost:.1f} ({ratio:.1f}x)",
                     "old_metric_json": old_json,
                     "new_metric_json": new_json,
                 }
             )
 
+    severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+    out.sort(key=lambda x: severity_order.get(x["severity"], 0), reverse=True)
     return out

@@ -11,7 +11,7 @@ import {
   Timer,
   TrendingUp,
 } from "lucide-react";
-import { useCollect, useQueries, useRegressions } from "../api/hooks";
+import { useCollect, useCollectorStatus, useQueries, useRegressions } from "../api/hooks";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { LatencyChart } from "../components/LatencyChart";
 import { MetricCard } from "../components/MetricCard";
@@ -39,6 +39,7 @@ export function Dashboard() {
     sort: "mean_latency_desc",
   });
   const { data: regAll } = useRegressions({ limit: 100 });
+  const { data: collectorStatus } = useCollectorStatus();
 
   const collectMutation = useCollect();
 
@@ -69,7 +70,12 @@ export function Dashboard() {
   const totalRegs = regAll?.total ?? 0;
 
   const counts = useMemo(() => {
-    const c = { high: 0, medium: 0, low: 0 };
+    const c: Record<"critical" | "high" | "medium" | "low", number> = {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+    };
     for (const r of regressions) c[r.severity] = (c[r.severity] ?? 0) + 1;
     return c;
   }, [regressions]);
@@ -161,10 +167,10 @@ export function Dashboard() {
           hint="latest snapshot"
         />
         <MetricCard
-          label="High-severity regs"
-          value={counts.high}
+          label="High/Critical regs"
+          value={counts.high + counts.critical}
           icon={AlertTriangle}
-          tone={counts.high > 0 ? "bad" : "default"}
+          tone={counts.high + counts.critical > 0 ? "bad" : "default"}
           hint={`${totalRegs} total tracked`}
         />
         <MetricCard
@@ -268,7 +274,7 @@ export function Dashboard() {
       <Section
         icon={AlertTriangle}
         title="Activity feed"
-        hint="snapshots and regressions, newest first"
+        hint={`snapshots/regressions · collector ${collectorStatus?.[0]?.status ?? "unknown"}`}
         action={
           <button
             onClick={() => navigate("/regressions")}

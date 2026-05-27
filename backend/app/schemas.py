@@ -103,3 +103,12 @@ class ReportResult(BaseModel):
 class HealthOut(BaseModel):
     status: str
     db: str = Field(default="ok")
+
+
+class CollectorStatusOut(ORMBase):
+    service_id: str
+    environment: str
+    database_name: str
+    status: str
+    message: str | None
+    last_seen_at: datetime

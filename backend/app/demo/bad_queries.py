@@ -78,6 +78,11 @@ QUERIES: dict[str, str] = {
         ") "
         "SELECT count(*) FROM active"
     ),
+    "vector_similarity": (
+        "SELECT id, category FROM demo.vector_items "
+        "ORDER BY embedding <-> CAST('[0.11,0.22,0.33,0.44,0.55,0.66,0.77,0.88]' AS vector) "
+        "LIMIT 10"
+    ),
 }
 
 WEIGHTS: dict[str, int] = {
@@ -96,6 +101,7 @@ WEIGHTS: dict[str, int] = {
     "order_status_funnel": 3,
     "product_search": 2,
     "active_users_30d": 1,
+    "vector_similarity": 3,
 }
 
 ZIP_CODES = ["10001", "94103", "60601", "75001", "98101", "30301"]

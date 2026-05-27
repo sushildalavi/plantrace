@@ -8,6 +8,7 @@ import type {
   QuerySummary,
   RegressionListItem,
   ReportResult,
+  CollectorStatusItem,
 } from "../types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -72,4 +73,6 @@ export const api = {
 
   getReport: (fid: string) =>
     request<ReportResult>(`/api/reports/${fid}`),
+
+  collectorStatus: () => request<CollectorStatusItem[]>(`/api/collector/status`),
 };

@@ -1,9 +1,10 @@
 interface Props {
-  severity: "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low";
   className?: string;
 }
 
 const styles = {
+  critical: { dot: "bg-bad", text: "text-bad", ring: "ring-bad bg-bad/20" },
   high: { dot: "bg-bad", text: "text-bad", ring: "ring-bad/30 bg-bad/10" },
   medium: { dot: "bg-warn", text: "text-warn", ring: "ring-warn/30 bg-warn/10" },
   low: { dot: "bg-secondary", text: "text-secondary", ring: "ring-edge bg-panel-2" },

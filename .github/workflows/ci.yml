@@ -27,7 +27,7 @@ jobs:
         run: cd backend && python -m ruff check app/ tests/
 
       - name: Unit tests (no Docker required)
-        run: cd backend && pytest tests/test_fingerprint.py tests/test_explain_parser.py tests/test_regression_detector.py -v
+        run: cd backend && pytest tests/test_fingerprint.py tests/test_explain_parser.py tests/test_regression_detector.py tests/test_streaming_ingest.py -v
 
       - name: Integration tests (Docker)
         run: cd backend && pytest tests/test_collector.py tests/test_api_smoke.py -v
@@ -54,3 +54,19 @@ jobs:
       - name: TypeScript + build
         run: npm run build
         working-directory: frontend
+
+  collector:
+    name: Collector build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config protobuf-compiler libprotobuf-dev libpqxx-dev librdkafka-dev libssl-dev
+      - name: Build collector
+        run: |
+          cd collector
+          cmake -S . -B build
+          cmake --build build -j
+          ./build/querylens-collector --help

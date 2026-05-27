@@ -54,13 +54,22 @@ export interface PlanDetail extends PlanSummary {
 export interface RegressionListItem {
   id: string;
   fingerprint_id: string;
-  severity: "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low";
   regression_type: string;
   message: string;
   old_metric_json: Record<string, unknown> | null;
   new_metric_json: Record<string, unknown> | null;
   created_at: string;
   normalized_query: string;
+}
+
+export interface CollectorStatusItem {
+  service_id: string;
+  environment: string;
+  database_name: string;
+  status: string;
+  message: string | null;
+  last_seen_at: string;
 }
 
 export interface QueryDetail {

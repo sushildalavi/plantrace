@@ -6,9 +6,9 @@ import { RegressionBadge } from "../components/RegressionBadge";
 import { RegressionTypeIcon, regressionMeta } from "../components/RegressionTypeIcon";
 import { Section, Skeleton } from "../components/Section";
 
-type Severity = "all" | "high" | "medium" | "low";
+type Severity = "all" | "critical" | "high" | "medium" | "low";
 
-const SEVERITIES: Severity[] = ["all", "high", "medium", "low"];
+const SEVERITIES: Severity[] = ["all", "critical", "high", "medium", "low"];
 
 export function Regressions() {
   const navigate = useNavigate();

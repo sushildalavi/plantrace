@@ -1,0 +1,22 @@
+{
+  "id": null,
+  "uid": "querylens-overview",
+  "title": "QueryLens Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Telemetry Events Consumed",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [{"expr": "querylens_telemetry_events_consumed_total"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Persist Failures",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [{"expr": "querylens_telemetry_persist_failures_total"}]
+    }
+  ]
+}

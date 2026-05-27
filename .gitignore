@@ -31,6 +31,9 @@ dist/
 *.swp
 .DS_Store
 
+# C++ build
+collector/build/
+
 # postgres dumps
 *.sql.bak
 pgdata/

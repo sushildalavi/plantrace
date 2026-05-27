@@ -1,0 +1,29 @@
+from __future__ import annotations
+
+from app.models import QueryFingerprint, QueryMetric
+from app.streaming.ingest import ingest_query_event
+
+
+def test_ingest_query_event_persists_snapshot(db_session):
+    event = {
+        "database_name": "querylens",
+        "environment": "test",
+        "service_id": "collector-test",
+        "query_fingerprint": "abc123",
+        "normalized_sql": "select * from demo.orders where user_id = ?",
+        "calls": 10,
+        "total_exec_time_ms": 100.0,
+        "mean_exec_time_ms": 10.0,
+        "rows": 10,
+        "shared_blks_hit": 1,
+        "shared_blks_read": 1,
+        "temp_blks_written": 0,
+        "is_vector_query": False,
+        "captured_at": "2026-05-26T00:00:00Z",
+    }
+
+    ingest_query_event(db_session, event)
+    db_session.commit()
+
+    assert db_session.query(QueryFingerprint).filter_by(fingerprint_hash="abc123").count() == 1
+    assert db_session.query(QueryMetric).count() == 1

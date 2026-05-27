@@ -33,14 +33,14 @@ def test_regression_no_new_metric_returns_empty():
 
 
 def test_regression_latency_spike():
-    out = detect_regressions(_m(mean_ms=10.0), _m(mean_ms=18.0), _p(), _p())
+    out = detect_regressions(_m(mean_ms=10.0), _m(mean_ms=22.0), _p(), _p())
     types = [r["regression_type"] for r in out]
     assert "latency_spike" in types
     assert "severe_latency_spike" not in types
 
 
 def test_regression_severe_latency_only():
-    out = detect_regressions(_m(mean_ms=10.0), _m(mean_ms=40.0), _p(), _p())
+    out = detect_regressions(_m(mean_ms=10.0), _m(mean_ms=55.0), _p(), _p())
     types = [r["regression_type"] for r in out]
     assert types.count("severe_latency_spike") == 1
     assert "latency_spike" not in types
@@ -89,7 +89,7 @@ def test_regression_call_spike_low_severity():
 
 
 def test_regression_call_spike_suppressed_by_severe_latency():
-    out = detect_regressions(_m(mean_ms=10.0, calls=10), _m(mean_ms=40.0, calls=30), _p(), _p())
+    out = detect_regressions(_m(mean_ms=10.0, calls=10), _m(mean_ms=55.0, calls=30), _p(), _p())
     types = [r["regression_type"] for r in out]
     assert "severe_latency_spike" in types
     assert "call_spike" not in types
@@ -115,3 +115,11 @@ def test_regression_includes_metric_snapshots():
     rec = next(r for r in out if r["regression_type"] == "latency_spike")
     assert rec["old_metric_json"]["mean_ms"] == 10.0
     assert rec["new_metric_json"]["mean_ms"] == 20.0
+
+
+def test_regression_vector_hnsw_bypass_critical():
+    prev_plan = _p(seq=False, idx=True, top="Index Scan")
+    new_plan = _p(seq=True, idx=False, top="Seq Scan")
+    out = detect_regressions(_m(mean_ms=10.0), _m(mean_ms=12.0), prev_plan, new_plan, is_vector_query=True)
+    rec = next(r for r in out if r["regression_type"] == "vector_hnsw_index_bypass")
+    assert rec["severity"] == "critical"

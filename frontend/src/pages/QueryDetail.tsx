@@ -90,7 +90,8 @@ export function QueryDetail() {
 
   const fp = detail.fingerprint;
   const latestMetric = detail.latest_metric;
-  const hasHighReg = myRegs.some((r) => r.severity === "high");
+  const hasHighReg = myRegs.some((r) => r.severity === "high" || r.severity === "critical");
+  const isVectorQuery = /<=>|<->|<#>/.test(fp.normalized_query);
 
   return (
     <div className="space-y-6">
@@ -110,6 +111,11 @@ export function QueryDetail() {
               <Hash size={18} className="text-accent" strokeWidth={2.5} />
               <span className="font-mono">{fp.fingerprint_hash.slice(0, 16)}</span>
             </h1>
+            {isVectorQuery && (
+              <p className="mt-2 text-2xs font-mono uppercase tracking-wider text-accent">
+                vector query detected
+              </p>
+            )}
           </div>
           {hasHighReg && (
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-bad/10 ring-1 ring-bad/30 text-bad text-xs font-medium animate-scale-in">

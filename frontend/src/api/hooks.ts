@@ -86,3 +86,11 @@ export function useReport(fid: string) {
     retry: false,
   });
 }
+
+export function useCollectorStatus() {
+  return useQuery({
+    queryKey: ["collector-status"],
+    queryFn: api.collectorStatus,
+    staleTime: STALE,
+  });
+}

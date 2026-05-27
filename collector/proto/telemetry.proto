@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package querylens.telemetry.v1;
+
+message QueryTelemetryEvent {
+  string database_name = 1;
+  string environment = 2;
+  string service_id = 3;
+  string query_fingerprint = 4;
+  string normalized_sql = 5;
+  string raw_query_sample = 6;
+  int64 calls = 7;
+  double total_exec_time_ms = 8;
+  double mean_exec_time_ms = 9;
+  int64 rows = 10;
+  int64 shared_blks_hit = 11;
+  int64 shared_blks_read = 12;
+  int64 temp_blks_read = 13;
+  int64 temp_blks_written = 14;
+  string detected_vector_operator = 15;
+  bool is_vector_query = 16;
+  string explain_json = 17;
+  string captured_at = 18;
+}
+
+message PlanSnapshotEvent {
+  string database_name = 1;
+  string environment = 2;
+  string service_id = 3;
+  string query_fingerprint = 4;
+  string normalized_sql = 5;
+  string explain_json = 6;
+  string top_node_type = 7;
+  bool uses_seq_scan = 8;
+  bool uses_index_scan = 9;
+  double estimated_total_cost = 10;
+  int64 estimated_rows = 11;
+  int64 actual_rows = 12;
+  string captured_at = 13;
+}
+
+message CollectorHeartbeatEvent {
+  string service_id = 1;
+  string environment = 2;
+  string database_name = 3;
+  string status = 4;
+  string message = 5;
+  string captured_at = 6;
+}

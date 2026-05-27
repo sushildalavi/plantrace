@@ -18,6 +18,7 @@ const TYPE_MAP: Record<string, { Icon: LucideIcon; label: string; tone: string }
   row_estimate_mismatch: { Icon: AlertCircle, label: "Row estimate mismatch", tone: "text-warn" },
   temp_spill: { Icon: HardDriveDownload, label: "Temp spill", tone: "text-warn" },
   call_spike: { Icon: CircleDot, label: "Call spike", tone: "text-secondary" },
+  vector_hnsw_index_bypass: { Icon: Database, label: "Vector HNSW bypass", tone: "text-bad" },
 };
 
 export function regressionMeta(type: string) {

@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/regressions", tags=["regressions"])
 
 @router.get("", response_model=Page[RegressionListItem])
 def list_regressions(
-    severity: Literal["high", "medium", "low", "all"] = "all",
+    severity: Literal["critical", "high", "medium", "low", "all"] = "all",
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),

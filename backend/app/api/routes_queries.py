@@ -9,7 +9,15 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.models import QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
-from app.schemas import MetricPoint, Page, PlanDetail, PlanSummary, QueryDetail, QuerySummary
+from app.schemas import (
+    FingerprintOut,
+    MetricPoint,
+    Page,
+    PlanDetail,
+    PlanSummary,
+    QueryDetail,
+    QuerySummary,
+)
 
 router = APIRouter(prefix="/api/queries", tags=["queries"])
 
@@ -113,8 +121,6 @@ def get_query(fid: UUID, db: Session = Depends(get_db)):
         .first()
     )
     reg_count = db.query(QueryRegression).filter_by(fingerprint_id=fp.id).count()
-
-    from app.schemas import FingerprintOut
 
     return QueryDetail(
         fingerprint=FingerprintOut.model_validate(fp),

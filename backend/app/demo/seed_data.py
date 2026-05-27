@@ -19,6 +19,7 @@ PRODUCTS = 500
 ORDERS = 50_000
 ORDER_ITEMS = 150_000
 EVENTS = 200_000
+VECTOR_ITEMS = 10_000
 
 DDL = """
 CREATE SCHEMA IF NOT EXISTS demo;
@@ -63,13 +64,21 @@ CREATE TABLE IF NOT EXISTS demo.events (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS demo.vector_items (
+    id           BIGSERIAL PRIMARY KEY,
+    category     TEXT NOT NULL,
+    embedding    vector(8) NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS orders_user_id_idx ON demo.orders(user_id);
 CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON demo.order_items(order_id);
 CREATE INDEX IF NOT EXISTS events_user_created_idx ON demo.events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS vector_items_embedding_hnsw_idx ON demo.vector_items USING hnsw (embedding vector_l2_ops);
 """
 
 TRUNCATE = """
 TRUNCATE demo.events, demo.order_items, demo.orders, demo.products, demo.users RESTART IDENTITY CASCADE;
+TRUNCATE demo.vector_items RESTART IDENTITY CASCADE;
 """
 
 COUNTRIES = ["US", "GB", "DE", "FR", "JP", "IN", "BR", "AU", "CA", "MX"]
@@ -211,7 +220,36 @@ def seed(reset: bool = False) -> None:
             if rows:
                 conn.execute(_event_sql, rows)
 
-        conn.execute(text("ANALYZE demo.users, demo.products, demo.orders, demo.order_items, demo.events"))
+        if _row_count(conn, "vector_items") < VECTOR_ITEMS:
+            log.info("seeding %s vector_items", VECTOR_ITEMS)
+            rows = []
+            for _ in range(VECTOR_ITEMS):
+                vec = [round(rng.uniform(-1, 1), 4) for _ in range(8)]
+                rows.append(
+                    {
+                        "category": rng.choice(CATEGORIES),
+                        "embedding": "[" + ",".join(str(v) for v in vec) + "]",
+                    }
+                )
+                if len(rows) >= 2_000:
+                    conn.execute(
+                        text(
+                            "INSERT INTO demo.vector_items (category, embedding) "
+                            "VALUES (:category, CAST(:embedding AS vector))"
+                        ),
+                        rows,
+                    )
+                    rows = []
+            if rows:
+                conn.execute(
+                    text(
+                        "INSERT INTO demo.vector_items (category, embedding) "
+                        "VALUES (:category, CAST(:embedding AS vector))"
+                    ),
+                    rows,
+                )
+
+        conn.execute(text("ANALYZE demo.users, demo.products, demo.orders, demo.order_items, demo.events, demo.vector_items"))
     log.info("seed done")
 
 
