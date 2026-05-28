@@ -1,88 +1,99 @@
-# QueryLens v2 — PostgreSQL Observability Platform
+# QueryLens v2 — PostgreSQL Query Observability (Production-Style)
 
-QueryLens v2 is a production-style local platform for PostgreSQL query observability.
-
-## What is implemented
-
-- C++ telemetry collector (`libpqxx`) with SQL normalization, SHA-256 fingerprinting, vector operator detection (`<=>`, `<->`, `<#>`), and safe-gated `EXPLAIN (FORMAT JSON)`.
-- Protobuf telemetry contracts.
-- Kafka streaming pipeline (Redpanda-compatible broker in Docker Compose).
-- FastAPI control plane with aiokafka consumer, deterministic regression detection, REST APIs, and Prometheus metrics.
-- PostgreSQL persistence in `querylens` schema.
-- React dashboard (existing v1 views preserved and extended for critical severity + collector status hints).
-- Prometheus + Grafana observability stack.
+QueryLens is a reproducible local systems project for PostgreSQL performance observability.
+It collects query telemetry, fingerprints normalized SQL, captures safe plan snapshots, and detects deterministic regressions.
+It now includes reliability primitives: idempotent ingestion, retry/backoff, and DLQ routing.
 
 ## Architecture
 
-PostgreSQL (`pg_stat_statements`, `pgvector`) -> C++ collector -> Kafka (`query-telemetry`) -> FastAPI consumer -> `querylens` schema -> React UI.
+PostgreSQL (`pg_stat_statements`, `pgvector`)
+-> C++ collector (`libpqxx`, protobuf, Kafka producer)
+-> Redpanda/Kafka topics (`query-telemetry`, `collector-heartbeats`, `telemetry-dlq`)
+-> FastAPI + aiokafka consumer (idempotent persistence + regression engine)
+-> PostgreSQL `querylens` schema
+-> React dashboard
+-> Prometheus/Grafana
 
-Detailed docs:
-
+See:
 - `docs/ARCHITECTURE.md`
-- `docs/REGRESSION_RULES.md`
-- `docs/DEMO.md`
 - `docs/OPERATIONS.md`
+- `docs/BENCHMARKS.md`
+- `docs/REGRESSION_EVALUATION.md`
 
-## Services / Ports
+## Implemented
 
-- Frontend: `http://localhost:3030`
-- Backend API: `http://localhost:8765`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000` (`admin/admin`)
-- Postgres: `localhost:5434`
-- Kafka broker: `localhost:9092`
+- C++ telemetry collector with:
+  - SQL normalization and SHA-256 fingerprinting
+  - vector operator detection (`<=>`, `<->`, `<#>`)
+  - safe EXPLAIN gating for SELECT/WITH
+  - protobuf telemetry event publishing to Kafka
+- FastAPI control plane with:
+  - Kafka consumer (`aiokafka`)
+  - deterministic regression detection (8 classes incl. vector index bypass)
+  - idempotent event ingestion (`event_id` unique key)
+  - retry/backoff and DLQ routing
+  - Prometheus `/metrics`
+- PostgreSQL schema/migrations with snapshot + regression + DLQ tables
+- Prometheus + Grafana provisioning and alert rules
+- Demo workflows (`make demo`)
+- Benchmark/evaluation harnesses:
+  - ingestion benchmark script
+  - regression evaluation script
+
+## Not implemented
+
+- Exactly-once delivery semantics
+- Kubernetes deployment manifests
+- gRPC service APIs
+- Managed cloud production deployment
 
 ## Quickstart
 
 ```bash
+make setup
 make build
 make up
 make migrate
 make seed
+make test
 make demo
 ```
 
-## Make Commands
+## Benchmark / Evaluation
 
-- `make setup`
-- `make build`
-- `make up`
-- `make down`
-- `make logs`
-- `make migrate`
-- `make seed`
-- `make workload`
-- `make collect`
-- `make collect-cpp`
-- `make demo`
-- `make test`
-- `make test-backend`
-- `make test-collector`
-- `make test-frontend`
-- `make lint`
-- `make clean`
+```bash
+make benchmark N=10000
+make benchmark N=50000
+make benchmark-100k
+make regression-eval
+```
 
-## Regression Rules (deterministic)
+Outputs:
+- `benchmark_results/querylens_benchmark_<N>.json` / `.csv`
+- `benchmark_results/regression_eval.json` / `.csv`
 
-- severe latency spike (high): ratio >= 5x baseline
-- latency spike (medium): ratio >= 2x baseline
-- index->seq fallback (high)
-- vector HNSW bypass (critical)
-- row-estimate mismatch (medium): actual/estimated >= 10x
-- temp spill (medium)
-- call spike (low)
-- cost spike (medium)
+## Reliability metrics
 
-Thresholds are configurable in `backend/app/config.py`.
+- `querylens_duplicate_events_total`
+- `querylens_ingest_retries_total`
+- `querylens_dlq_events_total`
+- `querylens_telemetry_persist_failures_total`
+- `querylens_kafka_consumer_lag`
 
-## Limitations
+## Alerts
 
-- Collector currently publishes `QueryTelemetryEvent` on `query-telemetry`; heartbeat publishing can be added similarly.
-- Consumer lag metric is best-effort based on topic/partition position and end offsets.
-- No Kubernetes deployment in this repository.
+Prometheus alert rules:
+- high consumer lag
+- persistence failures
+- DLQ events
+- critical regressions
+- high API p95 latency
 
-## Resume bullets (only for implemented features)
+Defined in `infra/prometheus/alerts.yml`.
 
-- Built a C++ (`libpqxx`) PostgreSQL telemetry collector that fingerprints normalized SQL, safely captures `EXPLAIN JSON`, and streams protobuf events to Kafka.
-- Implemented a FastAPI control plane with aiokafka ingestion, deterministic regression detection (including pgvector HNSW bypass), and historical persistence in PostgreSQL.
-- Added platform observability with Prometheus metrics and Grafana provisioning, plus reproducible Docker Compose demo workflows for relational and vector regression scenarios.
+## Resume-safe bullets (only implemented)
+
+- Built a PostgreSQL observability platform that streams C++-collected query telemetry into Kafka and applies deterministic regression detection on persisted metric/plan snapshots.
+- Hardened ingestion reliability with idempotent event keys, bounded retry/backoff, and DLQ routing to avoid silent event loss during consumer persistence failures.
+- Added reproducible systems evaluation harnesses for ingestion throughput/latency/lag recovery and rule-engine precision/recall/F1 on seeded regression scenarios.
+- Operationalized the stack with Prometheus metrics, Grafana provisioning, alert rules, and Docker Compose workflows for end-to-end reproducible demos.

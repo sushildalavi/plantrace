@@ -58,12 +58,16 @@ class QueryMetric(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
+    event_id: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True, index=True)
     fingerprint_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(f"{SCHEMA}.query_fingerprints.id", ondelete="CASCADE"),
         nullable=False,
     )
     captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
+    ingested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
     )
     calls: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
@@ -174,5 +178,27 @@ class CollectorStatus(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="ok")
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
+
+
+class DlqEvent(Base):
+    __tablename__ = "dlq_events"
+    __table_args__ = (
+        Index("ix_dlq_events_failed_at", "failed_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    topic: Mapped[str] = mapped_column(Text, nullable=False)
+    event_id: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
+    failure_reason: Mapped[str] = mapped_column(Text, nullable=False)
+    exception_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retry_count: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    consumer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    payload_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    failed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
     )

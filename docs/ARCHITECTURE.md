@@ -1,35 +1,30 @@
 # QueryLens v2 Architecture
 
-QueryLens v2 uses a split data-plane/control-plane design.
+## Data plane
 
-- Data plane: PostgreSQL target + C++ collector + Kafka topics.
-- Control plane: FastAPI + aiokafka consumer + deterministic regression engine + REST APIs.
-- UI plane: React dashboard.
-- Ops plane: Prometheus/Grafana.
+PostgreSQL (`pg_stat_statements`, `pgvector`) -> C++ collector (`libpqxx`, protobuf) -> Kafka/Redpanda topics (`query-telemetry`, `collector-heartbeats`, `telemetry-dlq`).
 
-## Topology
+## Control plane
 
-PostgreSQL (`pg_stat_statements`, `pgvector`) -> C++ collector (`libpqxx`, protobuf) -> Kafka (`query-telemetry`, `collector-heartbeats`) -> FastAPI consumer -> `querylens` schema -> React UI.
+FastAPI service:
+- consumes telemetry with `aiokafka`
+- persists snapshots and regressions
+- applies deterministic rule engine
+- handles retries/backoff
+- routes failed events to DLQ
+- exposes `/health`, `/metrics`, and API endpoints
 
-## Services / Ports
+## Persistence
 
-- frontend: `3030`
-- backend: `8765` (container `8000`)
-- postgres: `5434` (container `5432`)
-- redpanda kafka: `9092`
-- prometheus: `9090`
-- grafana: `3000`
+`querylens` schema includes:
+- `query_fingerprints`
+- `query_metrics` (`event_id`, `ingested_at`)
+- `query_plans`
+- `query_regressions`
+- `query_reports`
+- `collector_status`
+- `dlq_events`
 
-## Compatibility
+## Ops plane
 
-Existing v1 endpoints are preserved:
-
-- `/api/queries`
-- `/api/regressions`
-- `/api/collect/run`
-- `/api/reports`
-
-Added:
-
-- `/api/collector/status`
-- `/metrics`
+Prometheus scrapes backend `/metrics`, loads alert rules, and Grafana dashboards are provisioned from repository files.

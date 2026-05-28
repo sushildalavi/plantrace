@@ -9,7 +9,7 @@ httpx==0.28.1
 python-dotenv==1.0.1
 aiokafka==0.11.0
 prometheus-client==0.21.1
-protobuf==5.29.2
+protobuf==5.29.3
 
 # dev / test
 pytest==8.3.4

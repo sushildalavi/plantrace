@@ -52,6 +52,7 @@ services:
     command: |
       rpk topic create query-telemetry --partitions 3 --replicas 1 --brokers redpanda:9092 || true
       rpk topic create collector-heartbeats --partitions 1 --replicas 1 --brokers redpanda:9092 || true
+      rpk topic create telemetry-dlq --partitions 1 --replicas 1 --brokers redpanda:9092 || true
 
   backend:
     build: ./backend
@@ -61,6 +62,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       KAFKA_TOPIC_QUERY_TELEMETRY: query-telemetry
       KAFKA_TOPIC_COLLECTOR_HEARTBEAT: collector-heartbeats
+      KAFKA_TOPIC_TELEMETRY_DLQ: telemetry-dlq
     depends_on:
       db:
         condition: service_healthy
@@ -104,6 +106,7 @@ services:
     image: prom/prometheus:v2.54.1
     volumes:
       - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
     ports:
       - "9090:9090"
     depends_on:

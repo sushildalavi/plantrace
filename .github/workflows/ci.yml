@@ -27,7 +27,10 @@ jobs:
         run: cd backend && python -m ruff check app/ tests/
 
       - name: Unit tests (no Docker required)
-        run: cd backend && pytest tests/test_fingerprint.py tests/test_explain_parser.py tests/test_regression_detector.py tests/test_streaming_ingest.py -v
+        run: cd backend && pytest tests/test_fingerprint.py tests/test_explain_parser.py tests/test_regression_detector.py tests/test_streaming_ingest.py tests/test_consumer_reliability.py -v
+
+      - name: Regression eval smoke
+        run: cd backend && python ../scripts/evaluate_regression_detection.py
 
       - name: Integration tests (Docker)
         run: cd backend && pytest tests/test_collector.py tests/test_api_smoke.py -v

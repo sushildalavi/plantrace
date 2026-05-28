@@ -7,7 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <pqxx/pqxx>
-#include <rdkafkacpp.h>
+#include <librdkafka/rdkafkacpp.h>
 #include <sstream>
 
 namespace {
@@ -139,7 +139,8 @@ int main(int argc, char **argv) {
         auto rc = producer->produce(topic, RdKafka::Topic::PARTITION_UA,
                                     RdKafka::Producer::RK_MSG_COPY,
                                     const_cast<char *>(payload.data()), payload.size(),
-                                    &key, nullptr);
+                                    key.data(), key.size(),
+                                    0, nullptr);
         if (rc != RdKafka::ERR_NO_ERROR) {
           std::cerr << "produce failed: " << RdKafka::err2str(rc) << "\n";
         }

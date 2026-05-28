@@ -8,6 +8,19 @@ telemetry_persist_failures_total = Counter(
     "querylens_telemetry_persist_failures_total",
     "Failed telemetry persistence attempts",
 )
+querylens_persistence_failures_total = telemetry_persist_failures_total
+duplicate_events_total = Counter(
+    "querylens_duplicate_events_total",
+    "Duplicate telemetry events skipped by idempotency key",
+)
+ingest_retries_total = Counter(
+    "querylens_ingest_retries_total",
+    "Number of ingestion retry attempts",
+)
+dlq_events_total = Counter(
+    "querylens_dlq_events_total",
+    "Telemetry events routed to dead-letter queue",
+)
 failed_explain_captures_total = Counter(
     "querylens_failed_explain_captures_total",
     "Number of telemetry events missing explain payload",

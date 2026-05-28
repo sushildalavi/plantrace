@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
 from app.core.explain_parser import parse_explain
 from app.core.regression_detector import MetricSnapshot, PlanSnapshot, detect_regressions
 from app.models import CollectorStatus, QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
-from app.observability.metrics import failed_explain_captures_total, regression_events_total
+from app.observability.metrics import duplicate_events_total, failed_explain_captures_total, regression_events_total
+
+IngestResult = Literal["inserted", "duplicate"]
 
 
 def _parse_ts(ts: str) -> datetime:
@@ -18,6 +22,18 @@ def _parse_ts(ts: str) -> datetime:
         return datetime.fromisoformat(ts.replace("Z", "+00:00"))
     except ValueError:
         return datetime.now(UTC)
+
+
+def event_id_for(event: dict, event_type: str = "query_telemetry") -> str:
+    parts = [
+        str(event.get("database_name", "")),
+        str(event.get("environment", "")),
+        str(event.get("query_fingerprint", "")),
+        str(event.get("captured_at", "")),
+        event_type,
+    ]
+    joined = "|".join(parts)
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
 def _upsert_fp(session: Session, normalized_sql: str, fingerprint_hash: str) -> QueryFingerprint:
@@ -47,12 +63,18 @@ def _latest_plan(session: Session, fp_id):
     )
 
 
-def ingest_query_event(session: Session, event: dict) -> None:
+def ingest_query_event(session: Session, event: dict) -> IngestResult:
+    eid = event_id_for(event)
+    if session.query(QueryMetric).filter_by(event_id=eid).first() is not None:
+        duplicate_events_total.inc()
+        return "duplicate"
+
     fp = _upsert_fp(session, event["normalized_sql"], event["query_fingerprint"])
     prev_m = _latest_metric(session, fp.id)
     prev_p = _latest_plan(session, fp.id)
 
     metric = QueryMetric(
+        event_id=eid,
         fingerprint_id=fp.id,
         captured_at=_parse_ts(event.get("captured_at", "")),
         calls=int(event.get("calls", 0)),
@@ -144,6 +166,8 @@ def ingest_query_event(session: Session, event: dict) -> None:
             )
         )
         regression_events_total.labels(severity=r["severity"], regression_type=r["regression_type"]).inc()
+
+    return "inserted"
 
 
 def ingest_heartbeat_event(session: Session, event: dict) -> None:

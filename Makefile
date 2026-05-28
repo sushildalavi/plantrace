@@ -1,4 +1,4 @@
-.PHONY: setup build up down logs migrate seed workload collect collect-cpp demo demo-reset test test-backend test-collector test-frontend lint clean
+.PHONY: setup build up down logs migrate seed workload collect collect-cpp demo demo-reset benchmark benchmark-100k regression-eval test test-backend test-collector test-frontend lint clean
 
 setup:
 	cp -n .env.example .env || true
@@ -54,6 +54,15 @@ demo-reset:
 	docker compose exec -T db psql -U querylens -d querylens -c "TRUNCATE querylens.query_regressions, querylens.query_reports, querylens.query_plans, querylens.query_metrics, querylens.query_fingerprints, querylens.collector_status CASCADE;" >/dev/null
 
 test: test-backend test-collector test-frontend
+
+benchmark:
+	docker compose exec backend python -m app.bench.telemetry_benchmark --events $(or $(N),10000)
+
+benchmark-100k:
+	docker compose exec backend python -m app.bench.telemetry_benchmark --events 100000
+
+regression-eval:
+	cd backend && .venv/bin/python ../scripts/evaluate_regression_detection.py
 
 test-backend:
 	cd backend && .venv/bin/pytest tests/ -v

@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     KAFKA_GROUP_ID: str = "querylens-control-plane"
     KAFKA_TOPIC_QUERY_TELEMETRY: str = "query-telemetry"
     KAFKA_TOPIC_COLLECTOR_HEARTBEAT: str = "collector-heartbeats"
+    KAFKA_TOPIC_TELEMETRY_DLQ: str = "telemetry-dlq"
+    KAFKA_CONSUMER_MAX_RETRIES: int = 3
+    KAFKA_RETRY_BACKOFFS_MS: str = "100,500,2000"
 
     REGRESSION_LATENCY_RATIO_MEDIUM: float = 2.0
     REGRESSION_LATENCY_RATIO_HIGH: float = 5.0
