@@ -79,6 +79,21 @@ class QueryDetail(ORMBase):
     regression_count: int
 
 
+class RecommendationOut(BaseModel):
+    id: str
+    title: str
+    severity: str
+    confidence: str
+    explanation: str
+    suggested_action: str
+    evidence_fields: list[str]
+    safe_sql: str | None = None
+
+
+class RecommendationList(BaseModel):
+    items: list[RecommendationOut]
+
+
 class Page[T](BaseModel):
     items: list[T]
     total: int

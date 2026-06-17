@@ -8,11 +8,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.core.recommendations import recommend_for_query
 from app.models import QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
 from app.schemas import (
     FingerprintOut,
     MetricPoint,
     Page,
+    RecommendationList,
+    RecommendationOut,
     PlanDetail,
     PlanSummary,
     QueryDetail,
@@ -176,3 +179,34 @@ def get_latest_plan(fid: UUID, db: Session = Depends(get_db)):
     if not plan:
         raise HTTPException(status_code=404, detail="no plan captured yet")
     return PlanDetail.model_validate(plan)
+
+
+@router.get("/{fid}/recommendations", response_model=RecommendationList)
+def get_query_recommendations(fid: UUID, db: Session = Depends(get_db)):
+    fp = _get_fp_or_404(str(fid), db)
+    latest_metric = (
+        db.query(QueryMetric)
+        .filter_by(fingerprint_id=fp.id)
+        .order_by(QueryMetric.captured_at.desc())
+        .first()
+    )
+    latest_plan = (
+        db.query(QueryPlan)
+        .filter_by(fingerprint_id=fp.id)
+        .order_by(QueryPlan.captured_at.desc())
+        .first()
+    )
+    latest_regression = (
+        db.query(QueryRegression)
+        .filter_by(fingerprint_id=fp.id)
+        .order_by(QueryRegression.created_at.desc())
+        .first()
+    )
+
+    items = recommend_for_query(
+        normalized_query=fp.normalized_query,
+        latest_metric=latest_metric,
+        latest_plan=latest_plan,
+        regression_type=latest_regression.regression_type if latest_regression else None,
+    )
+    return RecommendationList(items=[RecommendationOut.model_validate(item.to_dict()) for item in items])

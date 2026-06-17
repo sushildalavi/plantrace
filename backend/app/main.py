@@ -10,11 +10,11 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import text
 
-from app.api.routes_collect import router as collect_router
-from app.api.routes_collector_status import router as collector_status_router
-from app.api.routes_queries import router as queries_router
-from app.api.routes_regressions import router as regressions_router
-from app.api.routes_reports import router as reports_router
+from app.api.collect import router as collect_router
+from app.api.collector_status import router as collector_status_router
+from app.api.queries import router as queries_router
+from app.api.regressions import router as regressions_router
+from app.api.reports import router as reports_router
 from app.config import settings
 from app.database import engine
 from app.observability.metrics import api_request_latency_seconds

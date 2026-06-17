@@ -6,6 +6,7 @@ import type {
   PlanSummary,
   QueryDetail,
   QuerySummary,
+  RecommendationList,
   RegressionListItem,
   ReportResult,
   CollectorStatusItem,
@@ -46,6 +47,9 @@ export const api = {
   }) => request<Page<QuerySummary>>(`/api/queries${qs(params)}`),
 
   query: (fid: string) => request<QueryDetail>(`/api/queries/${fid}`),
+
+  recommendations: (fid: string) =>
+    request<RecommendationList>(`/api/queries/${fid}/recommendations`),
 
   metrics: (fid: string, limit = 200) =>
     request<MetricPoint[]>(`/api/queries/${fid}/metrics${qs({ limit })}`),

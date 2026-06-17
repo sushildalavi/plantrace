@@ -79,6 +79,21 @@ export interface QueryDetail {
   regression_count: number;
 }
 
+export interface RecommendationItem {
+  id: string;
+  title: string;
+  severity: "critical" | "high" | "medium" | "low";
+  confidence: "high" | "medium" | "low";
+  explanation: string;
+  suggested_action: string;
+  evidence_fields: string[];
+  safe_sql: string | null;
+}
+
+export interface RecommendationList {
+  items: RecommendationItem[];
+}
+
 export interface CollectResult {
   fingerprints: number;
   metrics: number;

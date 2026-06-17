@@ -43,6 +43,15 @@ export function useLatestPlan(fid: string) {
   });
 }
 
+export function useRecommendations(fid: string) {
+  return useQuery({
+    queryKey: ["recommendations", fid],
+    queryFn: () => api.recommendations(fid),
+    staleTime: STALE,
+    enabled: !!fid,
+  });
+}
+
 export function useRegressions(params?: {
   severity?: string;
   limit?: number;

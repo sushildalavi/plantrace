@@ -15,6 +15,7 @@ import {
   useGenerateReport,
   useLatestPlan,
   useMetrics,
+  useRecommendations,
   useQuery_,
   useRegressions,
   useReport,
@@ -48,6 +49,7 @@ export function QueryDetail() {
   const { data: detail, isLoading: dLoading } = useQuery_(fid);
   const { data: metrics = [] } = useMetrics(fid);
   const { data: plan } = useLatestPlan(fid);
+  const { data: recommendations } = useRecommendations(fid);
   const { data: regsPage } = useRegressions({ limit: 50 });
   const { data: existingReport } = useReport(fid);
   const generateMutation = useGenerateReport(fid);
@@ -90,6 +92,7 @@ export function QueryDetail() {
 
   const fp = detail.fingerprint;
   const latestMetric = detail.latest_metric;
+  const recItems = recommendations?.items ?? [];
   const hasHighReg = myRegs.some((r) => r.severity === "high" || r.severity === "critical");
   const isVectorQuery = /<=>|<->|<#>/.test(fp.normalized_query);
 
@@ -210,6 +213,53 @@ export function QueryDetail() {
           </Section>
         </div>
       )}
+
+      <Section
+        icon={Sparkles}
+        title="Deterministic recommendations"
+        hint={recItems.length > 0 ? `${recItems.length} rule-based suggestion${recItems.length === 1 ? "" : "s"}` : "No actionable recommendation matched this snapshot"}
+      >
+        <div className="p-5 space-y-3">
+          {recItems.length > 0 ? (
+            recItems.map((rec) => (
+              <article key={rec.id} className="rounded-xl border border-edge bg-panel-2/70 p-4 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-primary">{rec.title}</p>
+                    <p className="text-2xs uppercase tracking-widest text-muted font-mono mt-1">
+                      {rec.severity} · confidence {rec.confidence}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-edge px-2 py-1 text-2xs font-mono uppercase tracking-wider text-muted">
+                    {rec.evidence_fields.length} evidence field{rec.evidence_fields.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <p className="text-sm text-secondary leading-relaxed">{rec.explanation}</p>
+                <p className="text-sm text-primary leading-relaxed">{rec.suggested_action}</p>
+                <div className="flex flex-wrap gap-2">
+                  {rec.evidence_fields.map((field) => (
+                    <span key={field} className="chip chip--muted">
+                      {field}
+                    </span>
+                  ))}
+                </div>
+                {rec.safe_sql ? (
+                  <div className="rounded-lg border border-edge bg-panel px-3 py-2">
+                    <p className="text-2xs uppercase tracking-widest text-muted font-mono mb-1">safe sql</p>
+                    <SqlCode sql={rec.safe_sql} />
+                  </div>
+                ) : (
+                  <p className="text-2xs text-muted font-mono">No safe SQL suggestion generated for this rule.</p>
+                )}
+              </article>
+            ))
+          ) : (
+            <p className="text-sm text-muted">
+              The current query snapshot did not trigger any deterministic rule. That usually means the latest plan and metrics are not showing a clear regression pattern.
+            </p>
+          )}
+        </div>
+      </Section>
 
       {plan && (
         <Section
