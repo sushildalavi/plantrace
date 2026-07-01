@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from app.api.collect import router as collect_router
 from app.api.collector_status import router as collector_status_router
+from app.api.placement import router as placement_router
 from app.api.queries import router as queries_router
 from app.api.regressions import router as regressions_router
 from app.api.reports import router as reports_router
@@ -53,6 +54,7 @@ app.add_middleware(
 app.include_router(queries_router)
 app.include_router(regressions_router)
 app.include_router(collect_router)
+app.include_router(placement_router)
 app.include_router(reports_router)
 app.include_router(collector_status_router)
 

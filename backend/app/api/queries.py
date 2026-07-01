@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -8,20 +10,24 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.core.diagnostics import diagnose_query
 from app.core.performance_agent import build_performance_agent_report
 from app.core.recommendations import recommend_for_query
-from app.models import QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
+from app.models import QueryDiagnostic, QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
+from app.observability.metrics import diagnostic_failures_total, diagnostic_latency_seconds
 from app.schemas import (
     AgentReport,
+    DiagnosticOut,
     FingerprintOut,
     MetricPoint,
     Page,
-    RecommendationList,
-    RecommendationOut,
     PlanDetail,
     PlanSummary,
     QueryDetail,
+    QueryDiagnosticsOut,
     QuerySummary,
+    RecommendationList,
+    RecommendationOut,
 )
 
 router = APIRouter(prefix="/api/queries", tags=["queries"])
@@ -181,6 +187,80 @@ def get_latest_plan(fid: UUID, db: Session = Depends(get_db)):
     if not plan:
         raise HTTPException(status_code=404, detail="no plan captured yet")
     return PlanDetail.model_validate(plan)
+
+
+@router.get("/{fid}/diagnostics", response_model=QueryDiagnosticsOut)
+def get_query_diagnostics(fid: UUID, db: Session = Depends(get_db)):
+    fp = _get_fp_or_404(str(fid), db)
+    latest_metric = (
+        db.query(QueryMetric)
+        .filter_by(fingerprint_id=fp.id)
+        .order_by(QueryMetric.captured_at.desc())
+        .first()
+    )
+    latest_plan_obj = (
+        db.query(QueryPlan)
+        .filter_by(fingerprint_id=fp.id)
+        .order_by(QueryPlan.captured_at.desc())
+        .first()
+    )
+    previous_plan = (
+        db.query(QueryPlan)
+        .filter_by(fingerprint_id=fp.id)
+        .order_by(QueryPlan.captured_at.desc())
+        .offset(1)
+        .first()
+    )
+    stored = (
+        db.query(QueryDiagnostic)
+        .filter_by(fingerprint_id=fp.id)
+        .order_by(QueryDiagnostic.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    t0 = time.perf_counter()
+    if stored:
+        diagnostics = [DiagnosticOut.model_validate(row) for row in stored]
+    else:
+        from uuid import uuid4
+
+        try:
+            issues = diagnose_query(
+                normalized_query=fp.normalized_query,
+                latest_metric=latest_metric,
+                latest_plan=latest_plan_obj,
+                previous_plan=previous_plan,
+                plan_json=getattr(latest_plan_obj, "plan_json", None),
+            )
+        except Exception:
+            diagnostic_failures_total.inc()
+            issues = []
+        diagnostics = [
+            DiagnosticOut(
+                id=uuid4(),
+                fingerprint_id=fp.id,
+                plan_id=getattr(latest_plan_obj, "id", None),
+                diagnostic_type=issue.diagnostic_type,
+                severity=issue.severity,
+                title=issue.title,
+                explanation=issue.explanation,
+                suggested_action=issue.suggested_action,
+                evidence_json=issue.evidence_json,
+                created_at=getattr(latest_plan_obj, "captured_at", None) or datetime.now(UTC),
+            )
+            for issue in issues
+        ]
+
+    diagnostic_latency_seconds.labels(source="api").observe(time.perf_counter() - t0)
+
+    return QueryDiagnosticsOut(
+        fingerprint=FingerprintOut.model_validate(fp),
+        latest_plan=PlanSummary.model_validate(latest_plan_obj) if latest_plan_obj else None,
+        latest_metric=MetricPoint.model_validate(latest_metric) if latest_metric else None,
+        diagnostics=diagnostics,
+        diagnostic_count=len(diagnostics),
+    )
 
 
 @router.get("/{fid}/recommendations", response_model=RecommendationList)
