@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import {
   useGenerateReport,
+  useDiagnostics,
   useLatestPlan,
   useMetrics,
   useRecommendations,
@@ -49,6 +50,7 @@ export function QueryDetail() {
   const { data: detail, isLoading: dLoading } = useQuery_(fid);
   const { data: metrics = [] } = useMetrics(fid);
   const { data: plan } = useLatestPlan(fid);
+  const { data: diagnostics } = useDiagnostics(fid);
   const { data: recommendations } = useRecommendations(fid);
   const { data: regsPage } = useRegressions({ limit: 50 });
   const { data: existingReport } = useReport(fid);
@@ -119,6 +121,13 @@ export function QueryDetail() {
                 vector query detected
               </p>
             )}
+            <Link
+              to={`/queries/${fid}/diagnostics`}
+              className="inline-flex items-center gap-1.5 mt-3 text-2xs font-mono uppercase tracking-widest text-muted hover:text-primary transition-colors"
+            >
+              diagnostics view
+              <ArrowLeft size={11} className="rotate-180" />
+            </Link>
           </div>
           {hasHighReg && (
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-bad/10 ring-1 ring-bad/30 text-bad text-xs font-medium animate-scale-in">
@@ -213,6 +222,44 @@ export function QueryDetail() {
           </Section>
         </div>
       )}
+
+      <Section
+        icon={Sparkles}
+        title="Query diagnostics"
+        hint={
+          diagnostics?.diagnostic_count
+            ? `${diagnostics.diagnostic_count} diagnostic finding${
+                diagnostics.diagnostic_count === 1 ? "" : "s"
+              }`
+            : "No stored diagnostic findings yet"
+        }
+      >
+        <div className="p-5 space-y-3">
+          {(diagnostics?.diagnostics ?? []).length > 0 ? (
+            diagnostics!.diagnostics.map((diag) => (
+              <article key={diag.id} className="rounded-xl border border-edge bg-panel-2/70 p-4 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-primary">{diag.title}</p>
+                    <p className="text-2xs uppercase tracking-widest text-muted font-mono mt-1">
+                      {diag.diagnostic_type} · {diag.severity}
+                    </p>
+                  </div>
+                  <span className="chip chip--muted">{diag.evidence_json && Object.keys(diag.evidence_json).length} evidence fields</span>
+                </div>
+                <p className="text-sm text-secondary leading-relaxed">{diag.explanation}</p>
+                {diag.suggested_action && (
+                  <p className="text-sm text-primary leading-relaxed">{diag.suggested_action}</p>
+                )}
+              </article>
+            ))
+          ) : (
+            <p className="text-sm text-muted">
+              No persisted diagnostics have been stored for this fingerprint yet. Run the collector or streaming ingest after an EXPLAIN ANALYZE capture to populate this panel.
+            </p>
+          )}
+        </div>
+      </Section>
 
       <Section
         icon={Sparkles}
