@@ -46,6 +46,9 @@ class QueryFingerprint(Base):
     plans: Mapped[list[QueryPlan]] = relationship(back_populates="fingerprint", cascade="all, delete-orphan")
     regressions: Mapped[list[QueryRegression]] = relationship(back_populates="fingerprint", cascade="all, delete-orphan")
     reports: Mapped[list[QueryReport]] = relationship(back_populates="fingerprint", cascade="all, delete-orphan")
+    diagnostics: Mapped[list[QueryDiagnostic]] = relationship(
+        back_populates="fingerprint", cascade="all, delete-orphan"
+    )
 
 
 class QueryMetric(Base):
@@ -160,6 +163,40 @@ class QueryReport(Base):
     )
 
     fingerprint: Mapped[QueryFingerprint] = relationship(back_populates="reports")
+
+
+class QueryDiagnostic(Base):
+    __tablename__ = "query_diagnostics"
+    __table_args__ = (
+        Index("ix_query_diagnostics_fp_created", "fingerprint_id", "created_at"),
+        Index("ix_query_diagnostics_plan_created", "plan_id", "created_at"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    fingerprint_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(f"{SCHEMA}.query_fingerprints.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(f"{SCHEMA}.query_plans.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    diagnostic_type: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    evidence_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
+
+    fingerprint: Mapped[QueryFingerprint] = relationship(back_populates="diagnostics")
 
 
 class CollectorStatus(Base):

@@ -30,6 +30,19 @@ regression_events_total = Counter(
     "Regression events created",
     labelnames=("severity", "regression_type"),
 )
+diagnostic_events_total = Counter(
+    "querylens_diagnostic_events_total",
+    "Diagnostic findings created",
+    labelnames=("severity", "diagnostic_type"),
+)
+diagnostic_failures_total = Counter(
+    "querylens_diagnostic_failures_total",
+    "Diagnostic evaluation failures",
+)
+placement_failures_total = Counter(
+    "querylens_placement_failures_total",
+    "Placement simulation failures",
+)
 collector_heartbeat_age_seconds = Gauge(
     "querylens_collector_heartbeat_age_seconds",
     "Age of latest collector heartbeat",
@@ -44,4 +57,14 @@ api_request_latency_seconds = Histogram(
     "querylens_api_request_latency_seconds",
     "HTTP request latency",
     labelnames=("path", "method", "status"),
+)
+diagnostic_latency_seconds = Histogram(
+    "querylens_diagnostic_latency_seconds",
+    "Latency of query diagnostic evaluation",
+    labelnames=("source",),
+)
+placement_latency_seconds = Histogram(
+    "querylens_placement_latency_seconds",
+    "Latency of placement simulation execution",
+    labelnames=("algorithm",),
 )

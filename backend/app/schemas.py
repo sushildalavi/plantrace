@@ -47,6 +47,19 @@ class PlanDetail(PlanSummary):
     execution_time_ms: float | None
 
 
+class DiagnosticOut(ORMBase):
+    id: UUID
+    fingerprint_id: UUID
+    plan_id: UUID | None
+    diagnostic_type: str
+    severity: str
+    title: str
+    explanation: str
+    suggested_action: str | None
+    evidence_json: dict[str, Any]
+    created_at: datetime
+
+
 class RegressionOut(ORMBase):
     id: UUID
     fingerprint_id: UUID
@@ -77,6 +90,14 @@ class QueryDetail(ORMBase):
     latest_metric: MetricPoint | None
     latest_plan: PlanSummary | None
     regression_count: int
+
+
+class QueryDiagnosticsOut(ORMBase):
+    fingerprint: FingerprintOut
+    latest_plan: PlanSummary | None
+    diagnostics: list[DiagnosticOut]
+    diagnostic_count: int
+    latest_metric: MetricPoint | None = None
 
 
 class RecommendationOut(BaseModel):
@@ -127,6 +148,7 @@ class CollectResult(BaseModel):
     metrics: int
     plans: int
     regressions: int
+    diagnostics: int
     duration_ms: float
 
 
@@ -148,3 +170,74 @@ class CollectorStatusOut(ORMBase):
     status: str
     message: str | None
     last_seen_at: datetime
+
+
+class ResourceVector(BaseModel):
+    cpu: float
+    memory: float
+    storage: float
+    iops: float
+    p95_latency_ms: float
+
+
+class TenantTelemetryOut(BaseModel):
+    tenant_id: str
+    database_name: str
+    region: str
+    sql_fingerprint: str
+    normalized_sql: str
+    calls: int
+    mean_exec_time_ms: float
+    p95_latency_ms: float
+    cpu: float
+    memory: float
+    storage: float
+    iops: float
+    migration_cost: float
+
+
+class PlacementNodeOut(BaseModel):
+    node_id: str
+    region: str
+    cluster_id: str
+    availability_zone: str
+    capacity: ResourceVector
+    used: ResourceVector
+    overloaded: bool
+    tenants: list[str]
+    overload_score: float
+
+
+class PlacementComparisonOut(BaseModel):
+    overloaded_nodes_before: int
+    overloaded_nodes_after: int
+    balance_before: float
+    balance_after: float
+    migration_cost: float
+    hotspot_reduction: float
+    p95_decision_latency_ms: float
+
+
+class PlacementAlgorithmOut(BaseModel):
+    algorithm: str
+    nodes: list[PlacementNodeOut]
+    comparison: PlacementComparisonOut
+
+
+class PlacementSimulationOut(BaseModel):
+    seed: int
+    tenants: int
+    regions: int
+    clusters_per_region: int
+    nodes_per_cluster: int
+    telemetry: list[TenantTelemetryOut]
+    algorithms: list[PlacementAlgorithmOut]
+
+
+class PlacementSimulationRequest(BaseModel):
+    seed: int = 42
+    tenants: int = 48
+    regions: int = 3
+    clusters_per_region: int = 2
+    nodes_per_cluster: int = 3
+    algorithms: list[str] | None = None
