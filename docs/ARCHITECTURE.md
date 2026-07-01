@@ -9,10 +9,15 @@ PostgreSQL (`pg_stat_statements`, `pgvector`) -> C++ collector (`libpqxx`, proto
 FastAPI service:
 - consumes telemetry with `aiokafka`
 - persists snapshots and regressions
+- stores diagnostic findings derived from EXPLAIN ANALYZE evidence
 - applies deterministic rule engine
 - handles retries/backoff
 - routes failed events to DLQ
 - exposes `/health`, `/metrics`, and API endpoints
+
+## Simulator plane
+
+The placement simulator uses synthetic tenant telemetry to compare first-fit, greedy best-fit, weighted scoring, and local-search rebalance strategies. It is a what-if model for database placement planning, not a live control plane for production clusters.
 
 ## Persistence
 

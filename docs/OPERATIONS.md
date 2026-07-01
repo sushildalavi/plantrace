@@ -23,6 +23,10 @@
 - `querylens_ingest_retries_total`
 - `querylens_dlq_events_total`
 - `querylens_telemetry_persist_failures_total`
+- `querylens_diagnostic_latency_seconds`
+- `querylens_diagnostic_failures_total`
+- `querylens_placement_latency_seconds`
+- `querylens_placement_failures_total`
 - `querylens_kafka_consumer_lag`
 - `querylens_api_request_latency_seconds`
 
