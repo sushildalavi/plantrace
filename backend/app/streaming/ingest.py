@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from datetime import UTC, datetime
 from typing import Literal
 
 from sqlalchemy.orm import Session
 
+from app.core.diagnostics import diagnose_query, persist_diagnostics
 from app.core.explain_parser import parse_explain
 from app.core.regression_detector import MetricSnapshot, PlanSnapshot, detect_regressions
 from app.models import CollectorStatus, QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
 from app.observability.metrics import (
+    diagnostic_failures_total,
+    diagnostic_latency_seconds,
     duplicate_events_total,
     failed_explain_captures_total,
     regression_events_total,
@@ -170,6 +174,22 @@ def ingest_query_event(session: Session, event: dict) -> IngestResult:
             )
         )
         regression_events_total.labels(severity=r["severity"], regression_type=r["regression_type"]).inc()
+
+    t_diag = time.perf_counter()
+    try:
+        issues = diagnose_query(
+            normalized_query=event["normalized_sql"],
+            latest_metric=metric,
+            latest_plan=new_plan,
+            previous_plan=prev_p,
+            plan_json=json.loads(explain_json) if explain_json else None,
+        )
+    except Exception:
+        diagnostic_failures_total.inc()
+        issues = []
+    diagnostic_latency_seconds.labels(source="streaming").observe(time.perf_counter() - t_diag)
+    if issues:
+        persist_diagnostics(session, fingerprint_id=fp.id, plan_id=getattr(new_plan, "id", None), issues=issues)
 
     return "inserted"
 

@@ -23,6 +23,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.diagnostics import diagnose_query, persist_diagnostics
 from app.core.explain_parser import ParsedPlan, parse_explain
 from app.core.fingerprint import fingerprint
 from app.core.regression_detector import (
@@ -31,6 +32,7 @@ from app.core.regression_detector import (
     detect_regressions,
 )
 from app.models import QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
+from app.observability.metrics import diagnostic_failures_total, diagnostic_latency_seconds
 
 log = logging.getLogger(__name__)
 
@@ -207,7 +209,7 @@ def run_collection(
     session: Session, *, run_explain: bool = True
 ) -> dict[str, int | float]:
     t0 = time.monotonic()
-    counters: dict[str, int] = dict(fingerprints=0, metrics=0, plans=0, regressions=0)
+    counters: dict[str, int] = dict(fingerprints=0, metrics=0, plans=0, regressions=0, diagnostics=0)
 
     try:
         rows = session.execute(
@@ -244,6 +246,7 @@ def run_collection(
         counters["metrics"] += 1
 
         new_p: QueryPlan | None = None
+        plan_json = None
         if run_explain and _is_safe_select(raw_sql):
             plan_json, parsed = _run_explain(session, raw_sql)
             if plan_json is not None and parsed is not None:
@@ -281,6 +284,23 @@ def run_collection(
                 )
             )
             counters["regressions"] += 1
+
+        diag_t0 = time.perf_counter()
+        try:
+            issues = diagnose_query(
+                normalized_query=fp.normalized_query,
+                latest_metric=new_m,
+                latest_plan=new_p,
+                previous_plan=prev_p,
+                plan_json=plan_json,
+            )
+        except Exception:
+            diagnostic_failures_total.inc()
+            issues = []
+        diagnostic_latency_seconds.labels(source="collector").observe(time.perf_counter() - diag_t0)
+        if issues:
+            persist_diagnostics(session, fingerprint_id=fp.id, plan_id=getattr(new_p, "id", None), issues=issues)
+            counters["diagnostics"] += len(issues)
 
     session.commit()
     elapsed_ms = (time.monotonic() - t0) * 1000
