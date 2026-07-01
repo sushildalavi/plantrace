@@ -30,6 +30,12 @@ Results are sorted by severity before returning. When both `severe_latency_spike
 3. Each rule is evaluated independently; multiple rules can fire for the same query
 4. Regression events are persisted with old/new metric snapshots for auditability
 
+## Diagnostics vs. regressions
+
+- Diagnostics are broader plan-health findings such as missing index candidates, nested-loop explosions, and spill signals
+- Regressions are thresholded comparisons between consecutive snapshots
+- The placement simulator is separate from both systems and runs only on synthetic tenant telemetry
+
 ## pgvector / HNSW Bypass
 
 The `vector_hnsw_index_bypass` rule specifically targets queries containing vector operators (`<=>`, `<->`, `<#>`) where:
