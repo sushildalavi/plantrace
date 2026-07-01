@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Activity, AlertTriangle, Github } from "lucide-react";
+import { Activity, AlertTriangle, Github, LayoutGrid } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CommandPalette } from "./CommandPalette";
 
@@ -76,6 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <nav className="flex gap-1">
             {navItem("/", "Overview", Activity)}
             {navItem("/regressions", "Regressions", AlertTriangle)}
+            {navItem("/placement", "Placement", LayoutGrid)}
           </nav>
           <div className="ml-auto hidden sm:flex items-center gap-4 text-2xs text-muted font-mono">
             <CommandPalette />
