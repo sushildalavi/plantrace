@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.core.recommendations import recommend_for_query
 from app.models import QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
-from app.schemas import Page, RecommendationList, RecommendationOut, RegressionListItem, RegressionOut
+from app.schemas import (
+    Page,
+    RecommendationList,
+    RecommendationOut,
+    RegressionListItem,
+    RegressionOut,
+)
 
 router = APIRouter(prefix="/api/regressions", tags=["regressions"])
 

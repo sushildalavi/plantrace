@@ -75,8 +75,8 @@ def recommend_for_query(
         )
 
     if latest_plan is not None and getattr(latest_plan, "actual_rows", None) and getattr(latest_plan, "estimated_rows", None):
-        actual = int(getattr(latest_plan, "actual_rows"))
-        estimated = max(int(getattr(latest_plan, "estimated_rows")), 1)
+        actual = int(latest_plan.actual_rows)
+        estimated = max(int(latest_plan.estimated_rows), 1)
         ratio = actual / estimated
         if ratio >= 10:
             recs.append(
