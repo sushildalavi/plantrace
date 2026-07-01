@@ -19,6 +19,11 @@ class ParsedNode:
     estimated_rows: int | None
     actual_rows: int | None
     total_cost: float | None
+    temp_read_blocks: int | None = None
+    temp_written_blocks: int | None = None
+    sort_space_used_kb: float | None = None
+    sort_space_type: str | None = None
+    hash_batches: int | None = None
 
 
 @dataclass
@@ -42,6 +47,11 @@ def _walk(node: dict, acc: list[ParsedNode]) -> None:
             estimated_rows=node.get("Plan Rows"),
             actual_rows=node.get("Actual Rows"),
             total_cost=node.get("Total Cost"),
+            temp_read_blocks=node.get("Temp Read Blocks"),
+            temp_written_blocks=node.get("Temp Written Blocks"),
+            sort_space_used_kb=node.get("Sort Space Used"),
+            sort_space_type=node.get("Sort Space Type"),
+            hash_batches=node.get("Hash Batches"),
         )
     )
     for child in node.get("Plans") or []:
