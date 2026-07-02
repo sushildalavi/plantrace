@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Activity,
   ArrowRight,
+  BarChart3,
   Database,
   Hash,
   Play,
@@ -84,6 +85,14 @@ export function CommandPalette() {
         onRun: () => navigate("/app/queries"),
       },
       {
+        id: "nav:placement",
+        label: "Go to placement",
+        hint: "/app/placement",
+        icon: ArrowRight,
+        group: "navigate",
+        onRun: () => navigate("/app/placement"),
+      },
+      {
         id: "nav:regressions",
         label: "Go to regressions",
         hint: "/app/regressions",
@@ -98,6 +107,14 @@ export function CommandPalette() {
         icon: Hash,
         group: "navigate",
         onRun: () => navigate("/app/reports"),
+      },
+      {
+        id: "nav:learn",
+        label: "Go to learn",
+        hint: "/learn",
+        icon: BarChart3,
+        group: "navigate",
+        onRun: () => navigate("/learn"),
       },
     ];
     const actions: Item[] = [
