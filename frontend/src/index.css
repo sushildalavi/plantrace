@@ -1,5 +1,5 @@
 @import url("https://rsms.me/inter/inter.css");
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -13,27 +13,41 @@
   }
 
   body {
-    background-image:
-      radial-gradient(at 12% 8%, rgba(245, 158, 11, 0.06) 0, transparent 45%),
-      radial-gradient(at 88% 0%, rgba(99, 102, 241, 0.04) 0, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(52, 211, 153, 0.03) 0, transparent 60%);
+    background:
+      radial-gradient(circle at 12% 12%, rgba(78, 161, 255, 0.18), transparent 28%),
+      radial-gradient(circle at 88% 2%, rgba(45, 212, 191, 0.12), transparent 22%),
+      radial-gradient(circle at 50% 108%, rgba(20, 184, 255, 0.1), transparent 24%),
+      linear-gradient(180deg, #07101d 0%, #091625 36%, #0c1830 100%);
     background-attachment: fixed;
   }
 
-  /* subtle dot grid behind the page (very low opacity) */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
     background-size: 28px 28px;
-    background-position: 0 0;
+    opacity: 0.22;
+    z-index: 0;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.05), transparent 16%),
+      radial-gradient(circle at 50% 0%, rgba(78, 161, 255, 0.08), transparent 42%);
+    opacity: 0.9;
     z-index: 0;
   }
 
   ::selection {
-    background: rgba(245, 158, 11, 0.25);
+    background: rgba(78, 161, 255, 0.22);
   }
 
   ::-webkit-scrollbar {
@@ -44,26 +58,27 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #26262c;
-    border-radius: 6px;
-    border: 2px solid #0a0a0b;
+    background: rgba(126, 148, 179, 0.34);
+    border-radius: 999px;
+    border: 2px solid rgba(7, 16, 29, 0.92);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #3a3a42;
+    background: rgba(126, 148, 179, 0.54);
   }
 
   *:focus-visible {
-    @apply outline-none ring-1 ring-accent/60 ring-offset-2 ring-offset-ink rounded;
+    @apply outline-none ring-1 ring-accent/50 ring-offset-2 ring-offset-ink rounded;
   }
 }
 
 @layer components {
   .surface {
-    @apply rounded-lg border border-edge bg-panel relative;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    @apply rounded-2xl border border-edge bg-panel relative;
+    box-shadow: 0 18px 60px rgba(1, 7, 16, 0.28);
   }
   .surface-2 {
-    @apply rounded-lg border border-edge bg-panel-2;
+    @apply rounded-2xl border border-edge bg-panel-2;
+    box-shadow: 0 10px 32px rgba(1, 7, 16, 0.18);
   }
   .hairline {
     @apply border-edge;
@@ -71,22 +86,22 @@
   .skeleton {
     background: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.02) 0%,
-      rgba(255, 255, 255, 0.06) 50%,
-      rgba(255, 255, 255, 0.02) 100%
+      rgba(140, 49, 65, 0.06) 0%,
+      rgba(255, 255, 255, 0.65) 50%,
+      rgba(140, 49, 65, 0.06) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.6s linear infinite;
-    border-radius: 4px;
+    border-radius: 999px;
   }
   .glass-header {
     background: linear-gradient(
       to bottom,
-      rgba(10, 10, 11, 0.85) 0%,
-      rgba(10, 10, 11, 0.65) 100%
+      rgba(7, 16, 29, 0.94) 0%,
+      rgba(7, 16, 29, 0.78) 100%
     );
-    backdrop-filter: saturate(140%) blur(8px);
-    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
   }
 }
 
@@ -95,7 +110,7 @@
     font-variant-numeric: tabular-nums;
   }
   .stagger > * {
-    animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: fade-up 0.56s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .stagger > *:nth-child(1) { animation-delay: 0ms; }
   .stagger > *:nth-child(2) { animation-delay: 60ms; }
@@ -107,7 +122,7 @@
   .stagger > *:nth-child(8) { animation-delay: 420ms; }
 
   .stagger-fast > * {
-    animation: fade-up 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: fade-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .stagger-fast > *:nth-child(1) { animation-delay: 0ms; }
   .stagger-fast > *:nth-child(2) { animation-delay: 30ms; }

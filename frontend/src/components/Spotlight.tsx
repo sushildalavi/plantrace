@@ -9,7 +9,7 @@ interface Props {
 export function Spotlight({
   children,
   className = "",
-  glow = "rgba(245, 158, 11, 0.18)",
+  glow = "rgba(78, 161, 255, 0.18)",
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -40,8 +40,8 @@ export function Spotlight({
           className="pointer-events-none absolute inset-0 transition-opacity duration-300"
           style={{
             background:
-              "radial-gradient(220px circle at var(--mx) var(--my), var(--glow), transparent 70%)",
-            opacity: 1,
+              "radial-gradient(260px circle at var(--mx) var(--my), var(--glow), transparent 72%)",
+            opacity: 0.9,
           }}
         />
       )}

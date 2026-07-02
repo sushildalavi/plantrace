@@ -20,17 +20,17 @@ const toneIcon = {
 };
 
 const glowMap = {
-  default: "rgba(245, 158, 11, 0.16)",
-  warn: "rgba(251, 191, 36, 0.18)",
-  bad: "rgba(248, 113, 113, 0.22)",
-  ok: "rgba(52, 211, 153, 0.16)",
+  default: "rgba(78, 161, 255, 0.16)",
+  warn: "rgba(251, 191, 36, 0.16)",
+  bad: "rgba(251, 113, 133, 0.18)",
+  ok: "rgba(45, 212, 191, 0.14)",
 };
 
 const accentBar = {
-  default: "from-accent/0 via-accent/20 to-accent/0",
-  warn: "from-warn/0 via-warn/20 to-warn/0",
+  default: "from-accent/0 via-accent/30 to-accent/0",
+  warn: "from-warn/0 via-warn/30 to-warn/0",
   bad: "from-bad/0 via-bad/30 to-bad/0",
-  ok: "from-ok/0 via-ok/25 to-ok/0",
+  ok: "from-ok/0 via-ok/30 to-ok/0",
 };
 
 export function MetricCard({
