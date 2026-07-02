@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Generic, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+T = TypeVar("T")
 
 
 class ORMBase(BaseModel):
@@ -136,7 +138,7 @@ class AgentReport(BaseModel):
     trace: list[AgentTraceStep]
 
 
-class Page[T](BaseModel):
+class Page(BaseModel, Generic[T]):
     items: list[T]
     total: int
     limit: int
