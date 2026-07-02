@@ -23,6 +23,7 @@ import {
 } from "../api/hooks";
 import { LatencyChart } from "../components/LatencyChart";
 import { PlanViewer } from "../components/PlanViewer";
+import { InvestigatorPanel } from "../components/InvestigatorPanel";
 import { RegressionBadge } from "../components/RegressionBadge";
 import { RegressionTypeIcon, regressionMeta } from "../components/RegressionTypeIcon";
 import { Section, Skeleton } from "../components/Section";
@@ -122,7 +123,7 @@ export function QueryDetail() {
               </p>
             )}
             <Link
-              to={`/queries/${fid}/diagnostics`}
+              to={`/app/queries/${fid}/diagnostics`}
               className="inline-flex items-center gap-1.5 mt-3 text-2xs font-mono uppercase tracking-widest text-muted hover:text-primary transition-colors"
             >
               diagnostics view
@@ -260,6 +261,8 @@ export function QueryDetail() {
           )}
         </div>
       </Section>
+
+      <InvestigatorPanel queryId={fid} />
 
       <Section
         icon={Sparkles}

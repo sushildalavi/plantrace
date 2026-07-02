@@ -10,6 +10,9 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import text
 
+import app.database as db_mod
+from app.ai.service import build_query_investigator_service
+from app.api.ai import router as ai_router
 from app.api.collect import router as collect_router
 from app.api.collector_status import router as collector_status_router
 from app.api.placement import router as placement_router
@@ -17,7 +20,6 @@ from app.api.queries import router as queries_router
 from app.api.regressions import router as regressions_router
 from app.api.reports import router as reports_router
 from app.config import settings
-from app.database import engine
 from app.observability.metrics import api_request_latency_seconds
 from app.streaming.consumer import TelemetryConsumer
 
@@ -29,6 +31,8 @@ consumer = TelemetryConsumer()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    if not hasattr(app.state, "investigator_service"):
+        app.state.investigator_service = build_query_investigator_service()
     await consumer.start()
     try:
         yield
@@ -37,8 +41,11 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="PlanTrace",
-    description="SQL query diagnostics and synthetic workload optimization platform",
+    title="PlanTrace | Agentic SQL Diagnostics & Workload Intelligence Platform",
+    description=(
+        "SQL query diagnostics, regression investigation, and synthetic "
+        "workload optimization platform"
+    ),
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -54,6 +61,7 @@ app.add_middleware(
 app.include_router(queries_router)
 app.include_router(regressions_router)
 app.include_router(collect_router)
+app.include_router(ai_router)
 app.include_router(placement_router)
 app.include_router(reports_router)
 app.include_router(collector_status_router)
@@ -69,7 +77,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 def health():
     db_status = "ok"
     try:
-        with engine.connect() as conn:
+        with db_mod.engine.connect() as conn:
             conn.execute(text("SELECT 1"))
     except Exception as exc:
         db_status = str(exc)

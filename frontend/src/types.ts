@@ -203,3 +203,35 @@ export interface PlacementSimulationRequest {
   nodes_per_cluster?: number;
   algorithms?: string[] | null;
 }
+
+export interface InvestigationEvidenceItem {
+  signal: string;
+  observed_value: string;
+  why_it_matters: string;
+}
+
+export interface QueryInvestigationReport {
+  summary: string;
+  risk_level: "low" | "medium" | "high";
+  confidence: number;
+  likely_causes: string[];
+  evidence: InvestigationEvidenceItem[];
+  suggested_actions: string[];
+  insufficient_evidence: boolean;
+}
+
+export interface QueryInvestigationRequest {
+  query_id?: string;
+  fingerprint?: string;
+  regression_id?: string;
+}
+
+export interface QueryInvestigationResponse {
+  report: QueryInvestigationReport;
+  provider: string;
+  model_name: string | null;
+  source: "llm" | "heuristic" | "insufficient";
+  grounded: boolean;
+  latency_ms: number;
+  insufficient_reason: string | null;
+}

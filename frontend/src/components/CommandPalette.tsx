@@ -60,20 +60,44 @@ export function CommandPalette() {
   const items: Item[] = useMemo(() => {
     const navItems: Item[] = [
       {
-        id: "nav:overview",
-        label: "Go to overview",
+        id: "nav:landing",
+        label: "Go to landing",
         hint: "/",
         icon: Activity,
         group: "navigate",
         onRun: () => navigate("/"),
       },
       {
+        id: "nav:app",
+        label: "Go to app",
+        hint: "/app",
+        icon: Database,
+        group: "navigate",
+        onRun: () => navigate("/app"),
+      },
+      {
+        id: "nav:queries",
+        label: "Go to queries",
+        hint: "/app/queries",
+        icon: Hash,
+        group: "navigate",
+        onRun: () => navigate("/app/queries"),
+      },
+      {
         id: "nav:regressions",
         label: "Go to regressions",
-        hint: "/regressions",
+        hint: "/app/regressions",
         icon: AlertTriangle,
         group: "navigate",
-        onRun: () => navigate("/regressions"),
+        onRun: () => navigate("/app/regressions"),
+      },
+      {
+        id: "nav:reports",
+        label: "Go to reports",
+        hint: "/app/reports",
+        icon: Hash,
+        group: "navigate",
+        onRun: () => navigate("/app/reports"),
       },
     ];
     const actions: Item[] = [
@@ -98,7 +122,7 @@ export function CommandPalette() {
         " calls",
       icon: Database,
       group: "queries",
-      onRun: () => navigate(`/queries/${qq.id}`),
+      onRun: () => navigate(`/app/queries/${qq.id}`),
     }));
     const regs: Item[] = (regsPage?.items ?? []).slice(0, 30).map((r) => ({
       id: `r:${r.id}`,
@@ -106,7 +130,7 @@ export function CommandPalette() {
       hint: r.regression_type + " · " + r.severity,
       icon: AlertTriangle,
       group: "regressions",
-      onRun: () => navigate(`/queries/${r.fingerprint_id}`),
+      onRun: () => navigate(`/app/queries/${r.fingerprint_id}`),
     }));
     return [...navItems, ...actions, ...queries, ...regs];
   }, [queriesPage, regsPage, navigate, collectMutation]);

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 T = TypeVar("T")
 
@@ -243,3 +243,43 @@ class PlacementSimulationRequest(BaseModel):
     clusters_per_region: int = 2
     nodes_per_cluster: int = 3
     algorithms: list[str] | None = None
+
+
+class InvestigationEvidenceOut(BaseModel):
+    signal: str
+    observed_value: str
+    why_it_matters: str
+
+
+class QueryInvestigationOut(BaseModel):
+    summary: str
+    risk_level: Literal["low", "medium", "high"]
+    confidence: float = Field(ge=0.0, le=1.0)
+    likely_causes: list[str] = Field(default_factory=list)
+    evidence: list[InvestigationEvidenceOut] = Field(default_factory=list)
+    suggested_actions: list[str] = Field(default_factory=list)
+    insufficient_evidence: bool = False
+
+
+class QueryInvestigationRequest(BaseModel):
+    query_id: UUID | None = None
+    fingerprint: UUID | None = None
+    regression_id: UUID | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def _require_target(self):
+        if not (self.query_id or self.fingerprint or self.regression_id):
+            raise ValueError("provide query_id, fingerprint, or regression_id")
+        return self
+
+
+class QueryInvestigationResponse(BaseModel):
+    report: QueryInvestigationOut
+    provider: str
+    model_name: str | None = None
+    source: Literal["llm", "heuristic", "insufficient"]
+    grounded: bool
+    latency_ms: float
+    insufficient_reason: str | None = None

@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     LLM_MODEL: str = "gpt-4o-mini"
 
+    AI_PROVIDER: str = "disabled"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    AI_MODEL: str = "qwen2.5-coder:7b"
+    AI_FALLBACK_MODEL: str = "llama3.1:8b"
+    AI_TIMEOUT_SECONDS: int = 20
+
     CORS_ORIGINS: str = "http://localhost:3030"
     ENVIRONMENT: str = "local"
 

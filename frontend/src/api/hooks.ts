@@ -118,3 +118,9 @@ export function usePlacementSimulation() {
     mutationFn: api.placementSimulation,
   });
 }
+
+export function useQueryInvestigation() {
+  return useMutation({
+    mutationFn: api.queryInvestigation,
+  });
+}

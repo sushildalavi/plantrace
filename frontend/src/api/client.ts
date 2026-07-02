@@ -13,6 +13,8 @@ import type {
   RegressionListItem,
   ReportResult,
   CollectorStatusItem,
+  QueryInvestigationRequest,
+  QueryInvestigationResponse,
 } from "../types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -90,5 +92,11 @@ export const api = {
     request<PlacementSimulation>("/api/placement/simulate", {
       method: "POST",
       body: JSON.stringify(payload ?? {}),
+    }),
+
+  queryInvestigation: (payload: QueryInvestigationRequest) =>
+    request<QueryInvestigationResponse>("/api/ai/query-investigation", {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
 };

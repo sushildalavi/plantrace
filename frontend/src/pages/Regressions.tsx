@@ -99,7 +99,7 @@ export function Regressions() {
                       i % 2 === 0 ? "bg-transparent" : "bg-panel-2/30"
                     } hover:bg-accent/5`}
                     style={{ animationDelay: `${Math.min(i * 18, 240)}ms` }}
-                    onClick={() => navigate(`/queries/${r.fingerprint_id}`)}
+                    onClick={() => navigate(`/app/queries/${r.fingerprint_id}`)}
                   >
                     <td className="px-5 py-3">
                       <RegressionBadge severity={r.severity} />

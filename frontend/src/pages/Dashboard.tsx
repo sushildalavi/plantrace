@@ -233,7 +233,7 @@ export function Dashboard() {
                       <li
                         key={type}
                         className="group flex items-center gap-2 cursor-pointer"
-                        onClick={() => navigate("/regressions")}
+                        onClick={() => navigate("/app/regressions")}
                       >
                         <RegressionTypeIcon type={type} size={12} />
                         <span className="text-xs text-secondary group-hover:text-primary transition-colors truncate flex-1">
@@ -261,7 +261,7 @@ export function Dashboard() {
               )}
             </div>
             <button
-              onClick={() => navigate("/regressions")}
+              onClick={() => navigate("/app/regressions")}
               className="mt-5 w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 surface-2 hover:border-edge-bright text-xs text-secondary hover:text-primary transition-colors group"
             >
               browse all regressions
@@ -277,7 +277,7 @@ export function Dashboard() {
         hint={`snapshots/regressions · collector ${collectorStatus?.[0]?.status ?? "unknown"}`}
         action={
           <button
-            onClick={() => navigate("/regressions")}
+            onClick={() => navigate("/app/regressions")}
             className="text-2xs uppercase tracking-widest text-muted hover:text-secondary font-mono transition-colors"
           >
             view all →
@@ -304,7 +304,7 @@ export function Dashboard() {
             queries={queries}
             regressions={regressions}
             limit={12}
-            onRegressionClick={(fid) => navigate(`/queries/${fid}`)}
+            onRegressionClick={(fid) => navigate(`/app/queries/${fid}`)}
           />
         )}
       </Section>
@@ -321,7 +321,7 @@ export function Dashboard() {
             ))}
           </div>
         ) : (
-          <QueryTable rows={queries} onRowClick={(id) => navigate(`/queries/${id}`)} />
+          <QueryTable rows={queries} onRowClick={(id) => navigate(`/app/queries/${id}`)} />
         )}
       </Section>
     </div>
