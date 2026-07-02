@@ -132,6 +132,7 @@ class EvidenceBundle:
             payload["latest_plan"] = self.latest_plan.model_dump(mode="json")
         if self.previous_plan is not None:
             payload["previous_plan"] = self.previous_plan.model_dump(mode="json")
+            payload["plan_diff_summary"] = self.plan_diff_summary()
         if self.diagnostics:
             payload["diagnostics"] = [d.model_dump(mode="json") for d in self.diagnostics]
         if self.regressions:
@@ -142,6 +143,47 @@ class EvidenceBundle:
             payload["placement_context"] = self.placement_context
 
         return payload
+
+    def plan_diff_summary(self) -> dict[str, Any] | None:
+        if self.latest_plan is None or self.previous_plan is None:
+            return None
+
+        previous_shape = self.previous_plan.top_node_type
+        current_shape = self.latest_plan.top_node_type
+        access_path_delta = None
+        if self.previous_plan.uses_index_scan and self.latest_plan.uses_seq_scan:
+            access_path_delta = "index-assisted access regressed to sequential scan"
+        elif not self.previous_plan.uses_seq_scan and self.latest_plan.uses_seq_scan:
+            access_path_delta = "planner shifted from index-assisted access to sequential scan"
+        elif self.previous_plan.uses_seq_scan and self.latest_plan.uses_index_scan:
+            access_path_delta = "planner recovered from sequential scan to index-assisted access"
+
+        row_estimate_delta = None
+        if self.previous_plan.actual_rows is not None and self.previous_plan.estimated_rows is not None:
+            prev_ratio = self.previous_plan.actual_rows / max(self.previous_plan.estimated_rows, 1)
+            if self.latest_plan.actual_rows is not None and self.latest_plan.estimated_rows is not None:
+                latest_ratio = self.latest_plan.actual_rows / max(self.latest_plan.estimated_rows, 1)
+                row_estimate_delta = f"row-estimate ratio moved from {prev_ratio:.2f}x to {latest_ratio:.2f}x"
+
+        delta_parts = []
+        if previous_shape != current_shape:
+            delta_parts.append(f"top node changed from {previous_shape} to {current_shape}")
+        if self.previous_plan.estimated_total_cost is not None and self.latest_plan.estimated_total_cost is not None:
+            delta_parts.append(
+                f"estimated cost moved from {self.previous_plan.estimated_total_cost:.1f} to {self.latest_plan.estimated_total_cost:.1f}"
+            )
+        if self.previous_plan.actual_rows is not None and self.latest_plan.actual_rows is not None:
+            delta_parts.append(
+                f"actual rows moved from {self.previous_plan.actual_rows} to {self.latest_plan.actual_rows}"
+            )
+
+        return {
+            "previous_shape": previous_shape,
+            "current_shape": current_shape,
+            "plan_delta": "; ".join(delta_parts) if delta_parts else "plan structure changed between captures",
+            "row_estimate_delta": row_estimate_delta,
+            "access_path_delta": access_path_delta,
+        }
 
 
 def _get_fingerprint(session: Session, target_id: UUID) -> QueryFingerprint:

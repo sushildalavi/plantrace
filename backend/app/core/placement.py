@@ -166,6 +166,14 @@ class PlacementComparison:
     migration_cost: float
     hotspot_reduction: float
     p95_decision_latency_ms: float
+    placement_score_before: float
+    placement_score_after: float
+    regional_utilization_before: float
+    regional_utilization_after: float
+    tenant_skew_before: float
+    tenant_skew_after: float
+    capacity_headroom_before: float
+    capacity_headroom_after: float
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -199,6 +207,43 @@ def _overloaded_count(nodes: list[NodeCapacity]) -> int:
 
 def _hotspot(nodes: list[NodeCapacity]) -> float:
     return round(sum(node.overload_score for node in nodes), 6)
+
+
+def _tenant_skew(nodes: list[NodeCapacity]) -> float:
+    if len(nodes) < 2:
+        return 0.0
+    counts = [len(node.tenants) for node in nodes]
+    return round(pstdev(counts), 6)
+
+
+def _capacity_headroom(nodes: list[NodeCapacity]) -> float:
+    if not nodes:
+        return 0.0
+    headroom = []
+    for node in nodes:
+        utilization = node.utilization
+        headroom.append(max(0.0, 1.0 - utilization))
+    return round(sum(headroom) / len(headroom), 6)
+
+
+def _regional_utilization(nodes: list[NodeCapacity]) -> float:
+    regions: dict[str, list[float]] = {}
+    for node in nodes:
+        regions.setdefault(node.region, []).append(node.utilization)
+    if not regions:
+        return 0.0
+    regional_maxima = [max(values) for values in regions.values()]
+    return round(sum(regional_maxima) / len(regional_maxima), 6)
+
+
+def _placement_score(nodes: list[NodeCapacity]) -> float:
+    overloaded = _overloaded_count(nodes)
+    hotspot = _hotspot(nodes)
+    balance = _balance(nodes)
+    headroom = _capacity_headroom(nodes)
+    skew = _tenant_skew(nodes)
+    score = 100.0 - (overloaded * 8.0) - (hotspot * 4.0) - (balance * 25.0) + (headroom * 12.0) - (skew * 3.0)
+    return round(max(0.0, min(100.0, score)), 6)
 
 
 def _decision_latency_p95(values: list[float]) -> float:
@@ -310,6 +355,14 @@ def _compare(
         migration_cost=round(moved_cost, 4),
         hotspot_reduction=round(before_hotspot - after_hotspot, 6),
         p95_decision_latency_ms=_decision_latency_p95(decision_latencies),
+        placement_score_before=_placement_score(before),
+        placement_score_after=_placement_score(after),
+        regional_utilization_before=_regional_utilization(before),
+        regional_utilization_after=_regional_utilization(after),
+        tenant_skew_before=_tenant_skew(before),
+        tenant_skew_after=_tenant_skew(after),
+        capacity_headroom_before=_capacity_headroom(before),
+        capacity_headroom_after=_capacity_headroom(after),
     )
 
 
@@ -323,12 +376,15 @@ def run_algorithm(scenario: PlacementScenario, algorithm: str) -> PlacementResul
         "greedy-best-fit": _best_fit_selector,
         "weighted-scoring": _weighted_selector,
         "local-search-rebalancer": _weighted_selector,
+        "simulated-annealing": _weighted_selector,
     }
     selector = selector_map[algorithm]
     decision_latencies = _assign(working, selector)
 
     if algorithm == "local-search-rebalancer":
         _local_search(working)
+    elif algorithm == "simulated-annealing":
+        _simulated_annealing(working)
 
     comparison = _compare(
         baseline.nodes,
@@ -387,6 +443,60 @@ def _local_search(scenario: PlacementScenario) -> None:
                 target.add(tenant)
                 improved = True
                 break
+
+
+def _simulated_annealing(scenario: PlacementScenario) -> None:
+    import math
+    import random
+
+    if len(scenario.nodes) < 2:
+        return
+    rng = random.Random(scenario.seed)
+    temperature = 5.0
+    for _ in range(60):
+        source = rng.choice(scenario.nodes)
+        if not source.tenants:
+            temperature = max(0.1, temperature * 0.92)
+            continue
+        tenant = rng.choice(source.tenants)
+        candidates = [node for node in scenario.nodes if node is not source and node.can_host(tenant)]
+        if not candidates:
+            temperature = max(0.1, temperature * 0.92)
+            continue
+        target = min(candidates, key=lambda node: _score_node(node, tenant, weights={"cpu": 2.8, "memory": 2.0, "storage": 1.0, "iops": 2.0, "latency": 1.2}))
+        current_score = source.overload_score + target.overload_score
+        projected_source = NodeCapacity(
+            node_id=source.node_id,
+            region=source.region,
+            cluster_id=source.cluster_id,
+            availability_zone=source.availability_zone,
+            capacity=source.capacity,
+            used=ResourceVector(
+                cpu=source.used.cpu - tenant.resources.cpu,
+                memory=source.used.memory - tenant.resources.memory,
+                storage=source.used.storage - tenant.resources.storage,
+                iops=source.used.iops - tenant.resources.iops,
+                p95_latency_ms=source.used.p95_latency_ms,
+            ),
+            tenants=[t for t in source.tenants if t.tenant_id != tenant.tenant_id],
+        )
+        projected_target = NodeCapacity(
+            node_id=target.node_id,
+            region=target.region,
+            cluster_id=target.cluster_id,
+            availability_zone=target.availability_zone,
+            capacity=target.capacity,
+            used=target.used + tenant.resources,
+            tenants=target.tenants + [tenant],
+        )
+        projected_score = projected_source.overload_score + projected_target.overload_score
+        delta = projected_score - current_score
+        accept = delta <= 0 or rng.random() < math.exp(-delta / max(temperature, 0.1))
+        if accept:
+            source.tenants = [t for t in source.tenants if t.tenant_id != tenant.tenant_id]
+            source.used = projected_source.used
+            target.add(tenant)
+        temperature = max(0.1, temperature * 0.92)
 
 
 def generate_synthetic_telemetry(*, seed: int, tenants: int) -> list[TenantWorkload]:
@@ -488,7 +598,7 @@ def simulate_placement(
         clusters_per_region=clusters_per_region,
         nodes_per_cluster=nodes_per_cluster,
     )
-    algorithms = algorithms or ["first-fit", "greedy-best-fit", "weighted-scoring", "local-search-rebalancer"]
+    algorithms = algorithms or ["first-fit", "greedy-best-fit", "weighted-scoring", "local-search-rebalancer", "simulated-annealing"]
     results = [run_algorithm(scenario, algorithm) for algorithm in algorithms]
     return {
         "seed": seed,

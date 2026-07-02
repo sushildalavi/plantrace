@@ -15,6 +15,13 @@ It is intentionally honest in scope:
 - It is not a production Azure SQL deployment and does not claim to manage live cloud clusters
 - The backend still uses the internal `querylens` schema and `querylens_*` metrics for compatibility; the public project name is PlanTrace
 
+## Local Preview
+
+- Frontend: [http://localhost:5172](http://localhost:5172)
+- Backend API: [http://localhost:8201](http://localhost:8201)
+- Prometheus: [http://localhost:9090](http://localhost:9090)
+- Grafana: [http://localhost:3000](http://localhost:3000)
+
 ## Architecture
 
 ```mermaid
@@ -31,6 +38,8 @@ flowchart LR
     J --> K[Optional Ollama model]
 ```
 
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the grounded version of this map.
+
 ## What it does
 
 - Fingerprints normalized SQL so semantically identical statements collapse to one hash
@@ -44,12 +53,13 @@ flowchart LR
   - pgvector / HNSW bypass
 - Stores query plans, regressions, and diagnostic findings in PostgreSQL
 - Streams telemetry through Kafka / Redpanda with bounded retry and DLQ handling
-- Runs an evidence-grounded Query Regression Investigator that compacts telemetry, validates structured output, and falls back safely when evidence is thin
+- Runs an AI SQL Copilot / Query Regression Investigator that compacts telemetry, validates structured output, explains root cause and EXPLAIN diffs, suggests rewrites and index guidance, and falls back safely when evidence is thin
 - Simulates multi-tenant placement strategies:
   - first-fit baseline
   - greedy best-fit
   - weighted scoring
   - local-search rebalancer
+  - simulated annealing
 
 ## Layout
 
@@ -96,13 +106,13 @@ Screenshots live under [docs/screenshots](docs/screenshots/).
 ## API Examples
 
 ```bash
-curl http://localhost:8765/health
-curl http://localhost:8765/api/queries
-curl http://localhost:8765/api/queries/<fingerprint-id>/diagnostics
-curl -X POST http://localhost:8765/api/ai/query-investigation \
+curl http://localhost:8201/health
+curl http://localhost:8201/api/queries
+curl http://localhost:8201/api/queries/<fingerprint-id>/diagnostics
+curl -X POST http://localhost:8201/api/ai/query-investigation \
   -H 'content-type: application/json' \
   -d '{"query_id":"<fingerprint-id>"}'
-curl -X POST http://localhost:8765/api/placement/simulate \
+curl -X POST http://localhost:8201/api/placement/simulate \
   -H 'content-type: application/json' \
   -d '{"seed":42,"tenants":48,"regions":3,"clusters_per_region":2,"nodes_per_cluster":3}'
 ```
@@ -118,6 +128,21 @@ In short:
 - regression detection uses deterministic seeded scenarios
 - placement simulation is evaluated on synthetic tenant telemetry, not live customer clusters
 
+Canonical benchmark summary:
+
+- [docs/BENCHMARK_SUMMARY.md](docs/BENCHMARK_SUMMARY.md)
+- [backend/benchmark_results/canonical_benchmark_summary.json](backend/benchmark_results/canonical_benchmark_summary.json)
+
+Evaluation proof:
+
+- [backend/benchmark_results/regression_eval.json](backend/benchmark_results/regression_eval.json)
+- [backend/benchmark_results/placement_eval.json](backend/benchmark_results/placement_eval.json)
+- [backend/benchmark_results/query_investigator_eval.json](backend/benchmark_results/query_investigator_eval.json)
+
+Implemented vs not implemented:
+
+- [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)
+
 ## Testing
 
 ```bash
@@ -127,13 +152,19 @@ cd frontend && npm run build
 python scripts/evaluate_query_investigator.py
 ```
 
-`npm run build` prints a Rollup chunk-size warning (main bundle > 500 kB); this is non-blocking and does not affect the build output.
+One-command local demo:
+
+```bash
+make demo
+```
 
 ## Query Regression Investigator
 
-The investigator reads query fingerprints, latency trends, regression records, and diagnostics, then returns a structured report with summary, risk level, confidence, likely causes, evidence, and suggested actions.
+The investigator reads query fingerprints, latency trends, regression records, and diagnostics, then returns a structured report with summary, root cause, EXPLAIN diff, remediation priority, likely causes, evidence, citations, rewrite guidance, and suggested actions.
 
 - Default mode: `AI_PROVIDER=disabled`
+- Optional OpenAI mode: set `OPENAI_API_KEY` and `AI_PROVIDER=openai` or `auto`
+- Optional Gemini mode: set `GEMINI_API_KEY` and `AI_PROVIDER=gemini` or `auto`
 - Local Ollama mode: set `AI_PROVIDER=ollama`, `OLLAMA_BASE_URL=http://localhost:11434`, `AI_MODEL=qwen2.5-coder:7b`, and optionally `AI_FALLBACK_MODEL=llama3.1:8b`
 - CI mode: fake provider tests exercise the full workflow without requiring Ollama
 - Evaluation: `python scripts/evaluate_query_investigator.py --provider fake`
@@ -144,8 +175,12 @@ More setup details live in [docs/AI_INVESTIGATOR.md](docs/AI_INVESTIGATOR.md).
 
 Built a database telemetry platform that streams PostgreSQL query events from a C++ collector through Kafka into FastAPI and React dashboards for query debugging, optimizer regression analysis, and synthetic placement simulation.
 
-Implemented deterministic EXPLAIN ANALYZE diagnostics and query fingerprinting to detect row-estimate mismatch, sequential-scan fallbacks, temp spills, nested-loop explosions, and pgvector/HNSW bypass patterns.
+Implemented deterministic EXPLAIN ANALYZE diagnostics and query fingerprinting to detect row-estimate mismatch, sequential-scan fallbacks, temp spills, nested-loop explosions, missing index candidates, vector operator mismatches, and pgvector/HNSW bypass patterns.
 
-Added a synthetic multi-tenant placement engine with first-fit, greedy best-fit, weighted scoring, and local-search strategies to compare overloaded-node counts, utilization balance, migration cost, hotspot reduction, and p95 placement latency.
+Added a synthetic multi-tenant placement engine with first-fit, greedy best-fit, weighted scoring, local-search, and simulated-annealing strategies to compare overloaded-node counts, utilization balance, migration cost, hotspot reduction, headroom, tenant skew, and p95 placement latency.
 
-Added an evidence-grounded Query Regression Investigator that uses LangChain/LangGraph with optional Ollama support and a fake provider path for tests and CI.
+Added an evidence-grounded AI SQL Copilot that uses LangChain/LangGraph with optional OpenAI, Gemini, or Ollama support and a fake provider path for tests and CI.
+
+## Screenshot Plan
+
+See [docs/screenshots/README.md](docs/screenshots/README.md) for the current screenshot and GIF placeholders.

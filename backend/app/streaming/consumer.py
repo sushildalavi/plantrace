@@ -151,7 +151,10 @@ class TelemetryConsumer:
         log.info("kafka consumer started")
         try:
             while not self._stop.is_set():
-                result = await consumer.getmany(timeout_ms=1000, max_records=200)
+                result = await consumer.getmany(
+                    timeout_ms=settings.KAFKA_CONSUMER_POLL_TIMEOUT_MS,
+                    max_records=settings.KAFKA_CONSUMER_MAX_RECORDS,
+                )
                 for tp, records in result.items():
                     try:
                         end_offsets = await consumer.end_offsets([tp])

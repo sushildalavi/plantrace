@@ -17,6 +17,7 @@ def test_plantrace_benchmark_artifact_schema():
     assert artifact["events"] == 10000
     assert artifact["workers"] == 4
     assert "p95_ingestion_latency_ms" in artifact
+    assert "event_completion_rate" in artifact
 
 
 def test_plantrace_benchmark_artifact_with_live_metrics():
@@ -27,6 +28,7 @@ def test_plantrace_benchmark_artifact_with_live_metrics():
             "collector_throughput_events_per_sec": 52.3,
             "p95_ingestion_latency_ms": 14.2,
             "regression_detection_latency_ms": 88.0,
+            "consumed_events": 100,
             "dlq_count": 1,
             "dlq_rate": 0.01,
             "consumer_lag": 0.0,
@@ -35,3 +37,4 @@ def test_plantrace_benchmark_artifact_with_live_metrics():
     )
     assert artifact["status"] == "measured"
     assert artifact["collector_throughput_events_per_sec"] == 52.3
+    assert artifact["event_completion_rate"] == 1.0

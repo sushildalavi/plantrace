@@ -71,7 +71,7 @@ services:
       kafka-init:
         condition: service_completed_successfully
     ports:
-      - "8765:8000"
+      - "8201:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend:/app
@@ -98,7 +98,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3030:80"
+      - "5172:80"
     depends_on:
       - backend
 

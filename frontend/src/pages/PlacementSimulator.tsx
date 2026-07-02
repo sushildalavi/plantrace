@@ -13,6 +13,13 @@ const DEFAULTS = {
   nodes_per_cluster: 3,
 };
 
+const SCENARIOS = {
+  "small-cluster": { seed: 7, tenants: 18, regions: 1, clusters_per_region: 1, nodes_per_cluster: 2 },
+  medium: { seed: 42, tenants: 48, regions: 3, clusters_per_region: 2, nodes_per_cluster: 3 },
+  "regional-scale": { seed: 99, tenants: 72, regions: 4, clusters_per_region: 3, nodes_per_cluster: 3 },
+  burst: { seed: 202, tenants: 96, regions: 3, clusters_per_region: 2, nodes_per_cluster: 4 },
+} as const;
+
 function UtilBar({ node }: { node: PlacementNode }) {
   const pct = Math.min(100, Math.round(node.overload_score > 0 ? 100 : node.used.cpu / node.capacity.cpu * 100));
   return (
@@ -23,7 +30,7 @@ function UtilBar({ node }: { node: PlacementNode }) {
       </div>
       <div className="h-1.5 rounded bg-panel-2 overflow-hidden">
         <div
-          className={`h-full ${node.overloaded ? "bg-bad" : "bg-ok"}`}
+          className={`h-full transition-all duration-700 ease-out ${node.overloaded ? "bg-bad" : "bg-ok"}`}
           style={{ width: `${Math.max(5, pct)}%` }}
         />
       </div>
@@ -71,6 +78,18 @@ function AlgorithmPanel({ algo }: { algo: PlacementAlgorithm }) {
               {algo.comparison.p95_decision_latency_ms.toFixed(2)}ms
             </p>
           </div>
+          <div className="surface-2 p-3">
+            <p className="text-2xs uppercase tracking-widest text-muted font-mono">score</p>
+            <p className="mt-1 text-lg font-semibold text-primary num">
+              {algo.comparison.placement_score_after.toFixed(2)}
+            </p>
+          </div>
+          <div className="surface-2 p-3">
+            <p className="text-2xs uppercase tracking-widest text-muted font-mono">headroom</p>
+            <p className="mt-1 text-lg font-semibold text-primary num">
+              {algo.comparison.capacity_headroom_after.toFixed(3)}
+            </p>
+          </div>
         </div>
         <div className="space-y-3">
           {hotNodes.map((node) => (
@@ -97,6 +116,17 @@ export function PlacementSimulator() {
       .slice()
       .sort((a, b) => a.comparison.balance_after - b.comparison.balance_after || a.comparison.overloaded_nodes_after - b.comparison.overloaded_nodes_after)[0];
   }, [selectedAlgorithms]);
+
+  const selectedScenarioName = useMemo(() => {
+    const match = Object.entries(SCENARIOS).find(([, scenario]) =>
+      scenario.seed === request.seed &&
+      scenario.tenants === request.tenants &&
+      scenario.regions === request.regions &&
+      scenario.clusters_per_region === request.clusters_per_region &&
+      scenario.nodes_per_cluster === request.nodes_per_cluster
+    );
+    return match?.[0] ?? "custom";
+  }, [request]);
 
   const handleRun = async () => {
     const out = await simulationMutation.mutateAsync(request);
@@ -140,7 +170,22 @@ export function PlacementSimulator() {
       </div>
 
       <Section icon={SlidersHorizontal} title="Scenario" hint="synthetic tenant telemetry">
-        <div className="p-5 grid md:grid-cols-5 gap-3">
+        <div className="p-5 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(SCENARIOS).map(([name, scenario]) => (
+              <button
+                key={name}
+                onClick={() => setRequest(scenario)}
+                className={`rounded-full border px-3 py-1.5 text-2xs font-mono uppercase tracking-wider transition-colors ${selectedScenarioName === name ? "border-accent bg-accent/15 text-accent" : "border-edge bg-panel-2 text-muted hover:text-primary hover:border-edge-bright"}`}
+              >
+                {name}
+              </button>
+            ))}
+            <span className="rounded-full border border-edge bg-panel-2 px-3 py-1.5 text-2xs font-mono uppercase tracking-wider text-muted">
+              {selectedScenarioName}
+            </span>
+          </div>
+          <div className="grid md:grid-cols-5 gap-3">
           {(
             [
               ["seed", "Seed"],
@@ -160,6 +205,7 @@ export function PlacementSimulator() {
               />
             </label>
           ))}
+          </div>
         </div>
       </Section>
 
@@ -172,6 +218,8 @@ export function PlacementSimulator() {
             <MetricCard label="Algorithms" value={result.algorithms.length} icon={Table2} hint="comparison strategies" />
             <MetricCard label="Regions" value={result.regions} icon={SlidersHorizontal} hint="placement topology" />
             <MetricCard label="Tenants" value={result.tenants} icon={Sparkles} hint="workloads in simulation" />
+            <MetricCard label="Best score" value={Math.max(...result.algorithms.map((a) => a.comparison.placement_score_after)).toFixed(2)} icon={Sparkles} hint="higher is better" />
+            <MetricCard label="Headroom" value={Math.max(...result.algorithms.map((a) => a.comparison.capacity_headroom_after)).toFixed(3)} icon={Sparkles} hint="average free capacity" />
           </div>
 
           <Section icon={Table2} title="Algorithm comparison" hint="lower balance and overloaded-node counts are better">
@@ -184,6 +232,9 @@ export function PlacementSimulator() {
                     <th className="px-4 py-2.5 font-medium">Balance</th>
                     <th className="px-4 py-2.5 font-medium">Migration</th>
                     <th className="px-4 py-2.5 font-medium">Hotspot reduction</th>
+                    <th className="px-4 py-2.5 font-medium">Score</th>
+                    <th className="px-4 py-2.5 font-medium">Headroom</th>
+                    <th className="px-4 py-2.5 font-medium">Tenant skew</th>
                     <th className="px-4 py-2.5 font-medium">Decision p95</th>
                   </tr>
                 </thead>
@@ -195,6 +246,9 @@ export function PlacementSimulator() {
                       <td className="px-4 py-3 text-secondary num">{algo.comparison.balance_after.toFixed(4)}</td>
                       <td className="px-4 py-3 text-secondary num">{algo.comparison.migration_cost.toFixed(2)}</td>
                       <td className="px-4 py-3 text-secondary num">{algo.comparison.hotspot_reduction.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-secondary num">{algo.comparison.placement_score_after.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-secondary num">{algo.comparison.capacity_headroom_after.toFixed(3)}</td>
+                      <td className="px-4 py-3 text-secondary num">{algo.comparison.tenant_skew_after.toFixed(3)}</td>
                       <td className="px-4 py-3 text-secondary num">{algo.comparison.p95_decision_latency_ms.toFixed(2)}ms</td>
                     </tr>
                   ))}
@@ -209,7 +263,7 @@ export function PlacementSimulator() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-primary">Before: {baselineAlgorithm.algorithm}</h3>
-                    <span className="text-2xs font-mono text-muted">balance {baselineAlgorithm.comparison.balance_after.toFixed(4)}</span>
+                    <span className="text-2xs font-mono text-muted">score {baselineAlgorithm.comparison.placement_score_before.toFixed(2)}</span>
                   </div>
                   {baselineAlgorithm.nodes.slice(0, 5).map((node) => (
                     <UtilBar key={node.node_id} node={node} />
@@ -218,7 +272,7 @@ export function PlacementSimulator() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-primary">After: {optimizedAlgorithm.algorithm}</h3>
-                    <span className="text-2xs font-mono text-muted">balance {optimizedAlgorithm.comparison.balance_after.toFixed(4)}</span>
+                    <span className="text-2xs font-mono text-muted">score {optimizedAlgorithm.comparison.placement_score_after.toFixed(2)}</span>
                   </div>
                   {optimizedAlgorithm.nodes.slice(0, 5).map((node) => (
                     <UtilBar key={node.node_id} node={node} />

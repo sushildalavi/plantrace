@@ -3,6 +3,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+psycopg://querylens:querylens@db:5432/querylens"
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
     MIN_MEAN_MS: float = 0.0
     ALLOW_EXPLAIN_ANALYZE: bool = False
     EXPLAIN_TIMEOUT_MS: int = 5000
@@ -11,6 +15,8 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_API_KEY: str = ""
     LLM_MODEL: str = "gpt-4o-mini"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-pro"
 
     AI_PROVIDER: str = "disabled"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
@@ -29,6 +35,8 @@ class Settings(BaseSettings):
     KAFKA_TOPIC_TELEMETRY_DLQ: str = "telemetry-dlq"
     KAFKA_CONSUMER_MAX_RETRIES: int = 3
     KAFKA_RETRY_BACKOFFS_MS: str = "100,500,2000"
+    KAFKA_CONSUMER_MAX_RECORDS: int = 500
+    KAFKA_CONSUMER_POLL_TIMEOUT_MS: int = 1000
 
     REGRESSION_LATENCY_RATIO_MEDIUM: float = 2.0
     REGRESSION_LATENCY_RATIO_HIGH: float = 5.0

@@ -207,7 +207,7 @@ export function QueryDetail() {
               <LatencyChart
                 points={metrics}
                 dataKey="mean_exec_time_ms"
-                color="#f59e0b"
+                color="#4ea1ff"
                 unit="ms"
               />
             </div>
@@ -217,7 +217,7 @@ export function QueryDetail() {
               <LatencyChart
                 points={metrics}
                 dataKey="calls"
-                color="#34d399"
+                color="#2dd4bf"
               />
             </div>
           </Section>

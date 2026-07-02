@@ -65,12 +65,13 @@ def test_local_search_returns_simulation_shape():
     assert out["seed"] == 11
     assert out["tenants"] == 12
     assert out["telemetry"]
-    assert len(out["algorithms"]) == 4
+    assert len(out["algorithms"]) == 5
     assert {algo["algorithm"] for algo in out["algorithms"]} == {
         "first-fit",
         "greedy-best-fit",
         "weighted-scoring",
         "local-search-rebalancer",
+        "simulated-annealing",
     }
 
 

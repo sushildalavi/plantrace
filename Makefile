@@ -1,4 +1,4 @@
-.PHONY: setup build up down logs migrate seed workload collect collect-cpp demo demo-reset benchmark benchmark-100k regression-eval test test-backend test-collector test-frontend lint clean
+.PHONY: setup build up down logs migrate seed workload collect collect-cpp demo demo-reset benchmark benchmark-100k benchmark-250k benchmark-500k regression-eval test test-backend test-collector test-frontend lint clean
 
 setup:
 	cp -n .env.example .env || true
@@ -47,7 +47,7 @@ demo: up
 	docker compose exec backend python -m app.demo.workload --iterations 1500
 	$(MAKE) collect-cpp
 	@echo "--- degraded collected from C++ collector ---"
-	@echo "open http://localhost:3030 and http://localhost:3000"
+	@echo "open http://localhost:5172 and http://localhost:3000"
 
 demo-reset:
 	docker compose exec -T db psql -U querylens -d querylens -c "SELECT pg_stat_statements_reset();" >/dev/null
@@ -60,6 +60,12 @@ benchmark:
 
 benchmark-100k:
 	docker compose exec backend python -m app.bench.telemetry_benchmark --events 100000
+
+benchmark-250k:
+	docker compose exec backend python -m app.bench.telemetry_benchmark --events 250000
+
+benchmark-500k:
+	docker compose exec backend python -m app.bench.telemetry_benchmark --events 500000
 
 regression-eval:
 	cd backend && .venv/bin/python ../scripts/evaluate_regression_detection.py

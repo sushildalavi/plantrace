@@ -14,7 +14,13 @@ BACKEND_DIR = ROOT / "backend"
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run or summarize a PlanTrace benchmark.")
-    parser.add_argument("--events", type=int, default=10000)
+    parser.add_argument("--events", type=int, default=None)
+    parser.add_argument(
+        "--preset",
+        choices=["standard", "100k", "250k", "500k", "1m"],
+        default="standard",
+        help="Use a named benchmark profile instead of a custom event count.",
+    )
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--output-dir", default="benchmarks")
     parser.add_argument("--artifact-name", default="")
@@ -30,23 +36,41 @@ def _command_line(args: argparse.Namespace) -> str:
         f"--events {args.events}",
         f"--workers {args.workers}",
     ]
+    if getattr(args, "preset", "standard") != "standard":
+        parts.append(f"--preset {args.preset}")
     return " ".join(parts)
 
 
 def build_artifact(args: argparse.Namespace, live: dict[str, Any] | None = None, *, note: str | None = None) -> dict[str, Any]:
+    environment = {
+        "database": "pgvector/pgvector:pg16",
+        "broker": "redpandadata/redpanda:v25.1.2",
+        "stack": "docker compose local stack",
+        "backend": "FastAPI + aiokafka consumer",
+        "collector": "backend/app/bench/telemetry_benchmark.py",
+    }
     return {
         "status": live.get("status", "measured") if live else "pending",
         "events": args.events,
+        "submitted_events": args.events,
         "workers": args.workers,
         "collector_throughput_events_per_sec": live.get("collector_throughput_events_per_sec") if live else None,
+        "p50_ingestion_latency_ms": live.get("p50_ingestion_latency_ms") if live else None,
         "p95_ingestion_latency_ms": live.get("p95_ingestion_latency_ms") if live else None,
+        "p99_ingestion_latency_ms": live.get("p99_ingestion_latency_ms") if live else None,
         "regression_detection_latency_ms": live.get("regression_detection_latency_ms") if live else None,
+        "consumed_events": live.get("consumed_events") if live else None,
+        "event_completion_rate": (live.get("consumed_events", 0) / max(args.events, 1)) if live else None,
         "dlq_count": live.get("dlq_count") if live else None,
         "dlq_rate": live.get("dlq_rate") if live else None,
         "consumer_lag": live.get("consumer_lag") if live else None,
+        "persistence_failures": live.get("persistence_failures") if live else None,
+        "duplicate_events_skipped": live.get("duplicate_events_skipped") if live else None,
         "regression_classes_detected": live.get("regression_classes_detected") if live else None,
         "command": _command_line(args),
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "environment": live.get("environment") if live else environment,
+        "preset": getattr(args, "preset", "standard"),
         "note": live.get("note") if live else note,
     }
 
@@ -56,9 +80,19 @@ def render_markdown(artifact: dict[str, Any]) -> str:
         "# PlanTrace Benchmark",
         "",
         f"- status: {artifact['status']}",
-        f"- events: {artifact['events']}",
+        f"- preset: {artifact.get('preset', 'standard')}",
+        f"- submitted events: {artifact['submitted_events']}",
         f"- workers: {artifact['workers']}",
     ]
+    env = artifact.get("environment")
+    if isinstance(env, dict):
+        lines.extend(
+            [
+                f"- environment: {env.get('stack')}",
+                f"- database: {env.get('database')}",
+                f"- broker: {env.get('broker')}",
+            ]
+        )
     if artifact.get("note"):
         lines.append(f"- note: {artifact['note']}")
     lines.append("")
@@ -70,9 +104,14 @@ def render_markdown(artifact: dict[str, Any]) -> str:
         [
             "## Results",
             "",
+            f"- consumed events: {artifact.get('consumed_events')}",
+            f"- persistence failures: {artifact.get('persistence_failures')}",
             f"- collector throughput events/sec: {artifact['collector_throughput_events_per_sec']}",
+            f"- p50 ingestion latency ms: {artifact.get('p50_ingestion_latency_ms')}",
             f"- p95 ingestion latency ms: {artifact['p95_ingestion_latency_ms']}",
+            f"- p99 ingestion latency ms: {artifact.get('p99_ingestion_latency_ms')}",
             f"- regression detection latency ms: {artifact['regression_detection_latency_ms']}",
+            f"- event completion rate: {artifact.get('event_completion_rate')}",
             f"- dlq count: {artifact['dlq_count']}",
             f"- dlq rate: {artifact['dlq_rate']}",
             f"- consumer lag: {artifact['consumer_lag']}",
@@ -133,17 +172,38 @@ def _run_live_benchmark(args: argparse.Namespace) -> dict[str, Any] | None:
     return {
         "status": "measured",
         "collector_throughput_events_per_sec": payload.get("events_per_second"),
+        "p50_ingestion_latency_ms": payload.get("ingest_latency_ms_p50"),
         "p95_ingestion_latency_ms": payload.get("ingest_latency_ms_p95"),
+        "p99_ingestion_latency_ms": payload.get("ingest_latency_ms_p99"),
         "regression_detection_latency_ms": payload.get("produce_duration_seconds", 0) * 1000.0,
+        "consumed_events": payload.get("consumed_count"),
+        "persistence_failures": payload.get("persistence_failures_delta"),
+        "duplicate_events_skipped": payload.get("duplicate_events_skipped_delta"),
         "dlq_count": payload.get("dlq_events_delta"),
         "dlq_rate": (payload.get("dlq_events_delta", 0) / args.events) if args.events else 0.0,
         "consumer_lag": payload.get("kafka_lag_peak"),
         "regression_classes_detected": payload.get("regression_classes_detected", []),
+        "environment": {
+            "database": "pgvector/pgvector:pg16",
+            "broker": "redpandadata/redpanda:v25.1.2",
+            "stack": "docker compose local stack",
+            "backend": "FastAPI + aiokafka consumer",
+            "collector": "backend/app/bench/telemetry_benchmark.py",
+        },
     }
 
 
 def main() -> None:
     args = build_parser().parse_args()
+    preset_events = {
+        "standard": 10000,
+        "100k": 100000,
+        "250k": 250000,
+        "500k": 500000,
+        "1m": 1000000,
+    }[args.preset]
+    if args.events is None:
+        args.events = preset_events
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     name = args.artifact_name or f"plantrace_benchmark_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"

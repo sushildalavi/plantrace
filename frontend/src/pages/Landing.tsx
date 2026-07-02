@@ -66,7 +66,7 @@ function FeatureTile({
   description: string;
 }) {
   return (
-    <Spotlight className="surface h-full" glow="rgba(245, 158, 11, 0.12)">
+    <Spotlight className="surface h-full" glow="rgba(78, 161, 255, 0.12)">
       <div className="p-5 h-full">
         <div className="flex items-center gap-3">
           <span className="grid place-items-center w-9 h-9 rounded-xl border border-edge bg-panel-2">
@@ -452,6 +452,40 @@ export function Landing() {
               <p className="mt-2 text-lg font-semibold text-primary">{item.value}</p>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section
+        icon={BarChart3}
+        title="Synthetic benchmark proof"
+        hint="local telemetry runs already checked into the repo"
+      >
+        <div className="p-5 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-2xs uppercase tracking-widest text-muted font-mono">
+                <th className="px-4 py-2.5 font-medium">Events</th>
+                <th className="px-4 py-2.5 font-medium">Throughput</th>
+                <th className="px-4 py-2.5 font-medium">p95</th>
+                <th className="px-4 py-2.5 font-medium">DLQ</th>
+                <th className="px-4 py-2.5 font-medium">Persistence failures</th>
+              </tr>
+            </thead>
+            <tbody>
+              {landingDemo.benchmarkProof.map((row, i) => (
+                <tr key={row.events} className={`border-t border-edge ${i % 2 === 0 ? "bg-transparent" : "bg-panel-2/30"}`}>
+                  <td className="px-4 py-3 text-primary font-mono">{row.events}</td>
+                  <td className="px-4 py-3 text-secondary">{row.throughput}</td>
+                  <td className="px-4 py-3 text-secondary">{row.p95}</td>
+                  <td className="px-4 py-3 text-secondary num">{row.dlq}</td>
+                  <td className="px-4 py-3 text-secondary num">{row.persistenceFailures}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-3 text-xs text-muted">
+            Synthetic local telemetry benchmark only. These values come from the checked-in benchmark artifacts, not from Azure or a hosted cluster.
+          </p>
         </div>
       </Section>
     </div>

@@ -25,7 +25,7 @@ export function LatencyChart({
   points,
   dataKey,
   label,
-  color = "#f59e0b",
+  color = "#4ea1ff",
   height = 180,
   unit = "",
 }: Props) {
@@ -81,19 +81,19 @@ export function LatencyChart({
             </linearGradient>
           </defs>
           <CartesianGrid
-            stroke="#26262c"
+            stroke="#1d314b"
             strokeDasharray="2 4"
             vertical={false}
           />
           <XAxis
             dataKey="t"
-            tick={{ fill: "#6b6b75", fontSize: 10, fontFamily: "JetBrains Mono" }}
+            tick={{ fill: "#7f97b5", fontSize: 10, fontFamily: "IBM Plex Mono" }}
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fill: "#6b6b75", fontSize: 10, fontFamily: "JetBrains Mono" }}
+            tick={{ fill: "#7f97b5", fontSize: 10, fontFamily: "IBM Plex Mono" }}
             axisLine={false}
             tickLine={false}
             width={36}
@@ -107,20 +107,20 @@ export function LatencyChart({
               strokeWidth: 1,
             }}
             contentStyle={{
-              background: "#111114",
-              border: "1px solid #26262c",
+              background: "#091424",
+              border: "1px solid #213654",
               borderRadius: 6,
               fontSize: 12,
               padding: "8px 10px",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+              boxShadow: "0 10px 34px rgba(0,0,0,0.36)",
             }}
             labelStyle={{
-              color: "#a0a0a8",
+              color: "#9eb3d1",
               fontSize: 10,
               marginBottom: 4,
-              fontFamily: "JetBrains Mono",
+              fontFamily: "IBM Plex Mono",
             }}
-            itemStyle={{ color: "#e7e7ea", fontFamily: "JetBrains Mono" }}
+            itemStyle={{ color: "#eaf2ff", fontFamily: "IBM Plex Mono" }}
             formatter={(v: number | string) =>
               typeof v === "number"
                 ? [v.toFixed(2) + (unit ? " " + unit : ""), label || dataKey]
@@ -138,7 +138,7 @@ export function LatencyChart({
               r: 4,
               stroke: color,
               strokeWidth: 2,
-              fill: "#111114",
+              fill: "#091424",
             }}
             isAnimationActive
             animationDuration={700}
@@ -151,7 +151,7 @@ export function LatencyChart({
               r={3.5}
               stroke={color}
               strokeWidth={2}
-              fill="#111114"
+              fill="#091424"
               ifOverflow="extendDomain"
             />
           )}

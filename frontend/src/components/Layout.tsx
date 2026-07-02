@@ -128,7 +128,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen">
-      <aside className="hidden xl:fixed xl:inset-y-0 xl:z-30 xl:flex xl:w-[292px] xl:flex-col xl:border-r xl:border-edge xl:bg-panel/95 xl:backdrop-blur">
+      <aside className="hidden xl:fixed xl:inset-y-0 xl:z-30 xl:flex xl:w-[292px] xl:flex-col xl:border-r xl:border-edge xl:bg-panel/90 xl:backdrop-blur-xl">
         <div className="flex h-full flex-col">
           <div className="px-5 pt-5 pb-4 border-b border-edge">
             <NavLink to="/" className="flex items-center gap-2.5 group">
@@ -142,7 +142,7 @@ export function Layout() {
                   PlanTrace
                 </span>
                 <span className="block text-2xs text-muted font-mono uppercase tracking-widest">
-                  agentic sql intelligence
+                  azure-style observability
                 </span>
               </span>
             </NavLink>
@@ -165,7 +165,7 @@ export function Layout() {
                   </span>
                 </div>
                 <p className="mt-2 leading-relaxed">
-                  Query telemetry, regression detection, placement simulation, and reports in one surface.
+                  Query telemetry, regression detection, placement simulation, and reports in one cockpit.
                 </p>
               </div>
             </div>
@@ -182,7 +182,7 @@ export function Layout() {
               <p className="font-mono uppercase tracking-widest text-muted">status</p>
               <p className="mt-1 text-sm text-primary">{collectorLabel}</p>
               <p className="mt-1 text-2xs font-mono uppercase tracking-widest text-muted">
-                {pathname.startsWith("/app") ? "dashboard workspace" : "site shell"}
+                {pathname.startsWith("/app") ? "dashboard cockpit" : "site shell"}
               </p>
             </div>
             <a
@@ -214,11 +214,11 @@ export function Layout() {
                   </span>
                 </span>
                 <span>
-                  <span className="block font-display text-sm font-semibold text-primary tracking-tightest">
-                    PlanTrace
-                  </span>
-                  <span className="block text-2xs text-muted font-mono uppercase tracking-widest">
-                    workspace
+                <span className="block font-display text-sm font-semibold text-primary tracking-tightest">
+                  PlanTrace
+                </span>
+                <span className="block text-2xs text-muted font-mono uppercase tracking-widest">
+                    cockpit
                   </span>
                 </span>
               </NavLink>
@@ -228,7 +228,7 @@ export function Layout() {
               <span className="rounded-full border border-edge bg-panel-2 px-2.5 py-1 text-primary">
                 /app
               </span>
-              <span className="text-muted">Agentic SQL diagnostics</span>
+              <span className="text-muted">Azure-style SQL observability</span>
             </div>
 
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
@@ -265,7 +265,9 @@ export function Layout() {
         </header>
 
         <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 sm:py-8 animate-fade-in">
-          <Outlet />
+          <div key={pathname} className="animate-fade-up">
+            <Outlet />
+          </div>
         </main>
 
         <footer className="border-t border-edge bg-panel/60 px-4 sm:px-6 py-4">

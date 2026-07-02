@@ -177,6 +177,14 @@ export interface PlacementComparison {
   migration_cost: number;
   hotspot_reduction: number;
   p95_decision_latency_ms: number;
+  placement_score_before: number;
+  placement_score_after: number;
+  regional_utilization_before: number;
+  regional_utilization_after: number;
+  tenant_skew_before: number;
+  tenant_skew_after: number;
+  capacity_headroom_before: number;
+  capacity_headroom_after: number;
 }
 
 export interface PlacementAlgorithm {
@@ -210,13 +218,52 @@ export interface InvestigationEvidenceItem {
   why_it_matters: string;
 }
 
+export interface EvidenceCitation {
+  signal: string;
+  source: string;
+  observed_value: string;
+  rationale: string;
+}
+
+export interface ExplainDiffSummary {
+  previous_shape: string | null;
+  current_shape: string | null;
+  plan_delta: string;
+  row_estimate_delta: string | null;
+  access_path_delta: string | null;
+}
+
+export interface QueryRewriteSuggestion {
+  title: string;
+  rationale: string;
+  sql: string | null;
+}
+
+export interface IndexRecommendation {
+  title: string;
+  rationale: string;
+  sql: string | null;
+  operator_class: string | null;
+  confidence: number;
+}
+
 export interface QueryInvestigationReport {
   summary: string;
   risk_level: "low" | "medium" | "high";
   confidence: number;
+  remediation_priority: "p0" | "p1" | "p2" | "p3";
+  root_cause: string | null;
+  why_this_changed: string | null;
+  regression_timeline: string | null;
+  affected_query_fingerprint_summary: string | null;
+  explain_diff_summary: ExplainDiffSummary | null;
+  query_rewrite_suggestion: QueryRewriteSuggestion | null;
+  index_recommendation: IndexRecommendation | null;
+  evidence_citations: EvidenceCitation[];
   likely_causes: string[];
   evidence: InvestigationEvidenceItem[];
   suggested_actions: string[];
+  unsupported_claims: string[];
   insufficient_evidence: boolean;
 }
 

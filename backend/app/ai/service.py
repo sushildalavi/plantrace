@@ -16,7 +16,12 @@ from sqlalchemy.orm import Session
 
 from app.ai.evidence import EvidenceBundle, build_evidence_bundle, bundle_from_payload
 from app.ai.heuristics import build_heuristic_report
-from app.ai.providers import AIProvider, build_ollama_candidates
+from app.ai.providers import (
+    AIProvider,
+    build_gemini_provider,
+    build_ollama_candidates,
+    build_openai_provider,
+)
 from app.config import settings
 from app.schemas import (
     QueryInvestigationOut,
@@ -100,6 +105,10 @@ def _summarize_signals(bundle: EvidenceBundle) -> str:
             + ", ".join(f"{r.regression_type}:{r.severity}" for r in bundle.regressions[:4])
         )
 
+    if payload.get("plan_diff_summary"):
+        diff = payload["plan_diff_summary"]
+        pieces.append(f"plan-diff={diff['plan_delta']}")
+
     if bundle.placement_context is not None:
         pieces.append("placement-context=synthetic only")
 
@@ -116,10 +125,11 @@ def _build_prompt() -> ChatPromptTemplate:
                 "\n".join(
                     [
                         "You are PlanTrace's Query Regression Investigator.",
-                        "Produce a structured engineering report from telemetry and diagnostics.",
+                        "Produce a structured, evidence-grounded SQL copilot report from telemetry, EXPLAIN, and diagnostics.",
                         "Do not invent evidence or claim production/live-cluster control.",
                         "Use only the provided signals and keep placement wording honest.",
                         "If the evidence is thin, set insufficient_evidence true.",
+                        "Return rewrite and index guidance only when the bundle supports it.",
                     ]
                 ),
             ),
@@ -169,13 +179,34 @@ class QueryRegressionInvestigator:
     @staticmethod
     def _default_providers() -> list[AIProvider]:
         provider = settings.AI_PROVIDER.lower().strip()
-        if provider == "ollama":
-            return build_ollama_candidates(
-                model_name=settings.AI_MODEL,
-                fallback_model=settings.AI_FALLBACK_MODEL,
-                base_url=settings.OLLAMA_BASE_URL,
-            )
-        return []
+        providers: list[AIProvider] = []
+        if provider in {"auto", "openai"} or settings.OPENAI_API_KEY:
+            if settings.OPENAI_API_KEY:
+                providers.append(
+                    build_openai_provider(
+                        model_name=settings.LLM_MODEL,
+                        api_key=settings.OPENAI_API_KEY,
+                        base_url=settings.OPENAI_BASE_URL,
+                    )
+                )
+        if provider in {"auto", "gemini"} or settings.GEMINI_API_KEY:
+            if settings.GEMINI_API_KEY:
+                providers.append(
+                    build_gemini_provider(
+                        model_name=settings.GEMINI_MODEL,
+                        api_key=settings.GEMINI_API_KEY,
+                    )
+                )
+        if provider in {"auto", "ollama"} or settings.OLLAMA_BASE_URL:
+            if provider in {"auto", "ollama"}:
+                providers.extend(
+                    build_ollama_candidates(
+                        model_name=settings.AI_MODEL,
+                        fallback_model=settings.AI_FALLBACK_MODEL,
+                        base_url=settings.OLLAMA_BASE_URL,
+                    )
+                )
+        return providers
 
     def _build_workflow(self):
         graph = StateGraph(InvestigationState)
@@ -306,19 +337,30 @@ class QueryRegressionInvestigator:
         report_text = " ".join(
             [
                 report.summary,
+                report.root_cause or "",
+                report.why_this_changed or "",
+                report.regression_timeline or "",
+                report.affected_query_fingerprint_summary or "",
+                report.remediation_priority,
                 " ".join(report.likely_causes),
                 " ".join(report.suggested_actions),
                 " ".join(item.signal for item in report.evidence),
                 " ".join(item.observed_value for item in report.evidence),
                 " ".join(item.why_it_matters for item in report.evidence),
+                " ".join(c.signal for c in report.evidence_citations),
+                " ".join(c.observed_value for c in report.evidence_citations),
+                report.query_rewrite_suggestion.rationale if report.query_rewrite_suggestion else "",
+                report.index_recommendation.rationale if report.index_recommendation else "",
+                report.explain_diff_summary.plan_delta if report.explain_diff_summary else "",
             ]
         )
         unsupported_signal = any(item.signal.lower() not in allowed for item in report.evidence)
+        unsupported_citation = any(c.signal.lower() not in allowed for c in report.evidence_citations)
         banned_phrase = _contains_banned_phrase(report_text)
         too_thin = len(report.evidence) < 2 and not report.insufficient_evidence
         overconfident = report.confidence > 0.95 and bundle.evidence_count < 3
 
-        if unsupported_signal or banned_phrase or too_thin or overconfident:
+        if unsupported_signal or unsupported_citation or banned_phrase or too_thin or overconfident:
             fallback = build_heuristic_report(bundle, reason="grounding check rejected unsupported model claims")
             state.update(
                 report=fallback,

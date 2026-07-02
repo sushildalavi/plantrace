@@ -172,6 +172,9 @@ def test_fake_provider_success(db_session):
     assert response.report.insufficient_evidence is False
     assert response.report.evidence
     assert response.provider == "fake"
+    assert response.report.root_cause
+    assert response.report.evidence_citations
+    assert response.report.index_recommendation is not None
 
 
 def test_invalid_json_from_model_falls_back(db_session):
@@ -241,6 +244,15 @@ def test_grounding_check_rejects_unsupported_claims(db_session):
 
     assert response.source == "heuristic"
     assert response.insufficient_reason is not None
+
+
+def test_heuristic_report_includes_plan_diff_and_priority(db_session):
+    bundle = _seed_bundle(db_session)
+    report = build_heuristic_report(bundle)
+
+    assert report.explain_diff_summary is not None
+    assert report.affected_query_fingerprint_summary
+    assert report.remediation_priority in {"p0", "p1", "p2", "p3"}
 
 
 def test_api_endpoint_uses_fake_service(db_session):

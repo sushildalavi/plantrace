@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { ArrowRight, Github } from "lucide-react";
 
 function TopLink({
@@ -25,10 +25,11 @@ function TopLink({
 
 export function SiteLayout() {
   const year = useMemo(() => new Date().getFullYear(), []);
+  const { pathname } = useLocation();
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-20 border-b border-edge bg-ink/85 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-edge bg-ink/82 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
           <NavLink to="/" className="flex items-center gap-2.5">
             <span className="relative grid place-items-center w-8 h-8 rounded-lg bg-gradient-to-br from-accent/20 to-accent/0 ring-1 ring-accent/25">
@@ -41,7 +42,7 @@ export function SiteLayout() {
                 PlanTrace
               </span>
               <span className="block text-2xs text-muted font-mono uppercase tracking-widest">
-                product site
+                product cockpit
               </span>
             </span>
           </NavLink>
@@ -74,10 +75,12 @@ export function SiteLayout() {
       </header>
 
       <main className="flex-1">
-        <Outlet />
+        <div key={pathname} className="animate-fade-up">
+          <Outlet />
+        </div>
       </main>
 
-      <footer className="border-t border-edge bg-panel/40 px-4 sm:px-6 py-5">
+      <footer className="border-t border-edge bg-panel/55 px-4 sm:px-6 py-5">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-2xs text-muted font-mono sm:flex-row sm:items-center sm:justify-between">
           <span>PlanTrace · SQL telemetry · regression diagnostics · workload placement</span>
           <span>{year} · local demo-ready product shell</span>

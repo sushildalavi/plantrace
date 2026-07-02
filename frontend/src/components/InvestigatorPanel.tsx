@@ -38,6 +38,16 @@ function SourceBadge({ source }: { source: QueryInvestigationResponse["source"] 
   );
 }
 
+function PriorityBadge({ priority }: { priority: QueryInvestigationResponse["report"]["remediation_priority"] }) {
+  const tone =
+    priority === "p0"
+      ? "bg-bad/10 text-bad ring-bad/30"
+      : priority === "p1"
+        ? "bg-warn/10 text-warn ring-warn/30"
+        : "bg-ok/10 text-ok ring-ok/30";
+  return <span className={`inline-flex items-center rounded-full px-2 py-1 text-2xs font-mono uppercase tracking-wider ring-1 ${tone}`}>{priority}</span>;
+}
+
 export function InvestigatorPanel({ queryId }: { queryId: string }) {
   const investigation = useMutation({
     mutationFn: () => api.queryInvestigation({ query_id: queryId }),
@@ -110,6 +120,21 @@ export function InvestigatorPanel({ queryId }: { queryId: string }) {
               </div>
             </div>
 
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="surface-2 p-3">
+                <p className="text-2xs uppercase tracking-widest text-muted font-mono">root cause</p>
+                <p className="mt-2 text-sm text-primary leading-relaxed">{report.root_cause ?? "Not enough evidence to state one."}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-2xs text-muted font-mono uppercase tracking-widest">priority</span>
+                  <PriorityBadge priority={report.remediation_priority} />
+                </div>
+              </div>
+              <div className="surface-2 p-3">
+                <p className="text-2xs uppercase tracking-widest text-muted font-mono">why this changed</p>
+                <p className="mt-2 text-sm text-primary leading-relaxed">{report.why_this_changed ?? "The report did not have enough plan history to explain the shift."}</p>
+              </div>
+            </div>
+
             <div className={`rounded-xl border px-4 py-3 ${report.insufficient_evidence ? "border-warn/30 bg-warn/10" : "border-edge bg-panel-2/70"}`}>
               <p className="text-2xs uppercase tracking-widest text-muted font-mono">summary</p>
               <p className="mt-1.5 text-sm text-primary leading-relaxed">{report.summary}</p>
@@ -119,6 +144,99 @@ export function InvestigatorPanel({ queryId }: { queryId: string }) {
                 </p>
               )}
             </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="surface-2 p-4 space-y-3">
+                <p className="text-2xs uppercase tracking-widest text-muted font-mono">rewrite suggestion</p>
+                {report.query_rewrite_suggestion ? (
+                  <div>
+                    <p className="text-sm font-semibold text-primary">{report.query_rewrite_suggestion.title}</p>
+                    <p className="mt-2 text-sm text-secondary leading-relaxed">{report.query_rewrite_suggestion.rationale}</p>
+                    {report.query_rewrite_suggestion.sql && (
+                      <pre className="mt-3 overflow-x-auto rounded-lg border border-edge bg-panel px-3 py-2 text-xs font-mono text-primary">
+                        {report.query_rewrite_suggestion.sql}
+                      </pre>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">No rewrite suggestion was emitted.</p>
+                )}
+              </div>
+              <div className="surface-2 p-4 space-y-3">
+                <p className="text-2xs uppercase tracking-widest text-muted font-mono">index guidance</p>
+                {report.index_recommendation ? (
+                  <div>
+                    <p className="text-sm font-semibold text-primary">{report.index_recommendation.title}</p>
+                    <p className="mt-2 text-sm text-secondary leading-relaxed">{report.index_recommendation.rationale}</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <PriorityBadge priority={report.remediation_priority} />
+                      <span className="text-2xs text-muted font-mono">confidence {Math.round(report.index_recommendation.confidence * 100)}%</span>
+                    </div>
+                    {report.index_recommendation.operator_class && (
+                      <p className="mt-2 text-2xs font-mono uppercase tracking-widest text-muted">
+                        {report.index_recommendation.operator_class}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">No index recommendation was emitted.</p>
+                )}
+              </div>
+            </div>
+
+            {report.explain_diff_summary && (
+              <div className="surface-2 p-4">
+                <p className="text-2xs uppercase tracking-widest text-muted font-mono">explain diff</p>
+                <p className="mt-2 text-sm text-primary leading-relaxed">{report.explain_diff_summary.plan_delta}</p>
+                <div className="mt-3 grid gap-2 md:grid-cols-3 text-xs text-secondary">
+                  <span className="rounded-lg border border-edge bg-ink/20 px-3 py-2">previous: {report.explain_diff_summary.previous_shape ?? "n/a"}</span>
+                  <span className="rounded-lg border border-edge bg-ink/20 px-3 py-2">current: {report.explain_diff_summary.current_shape ?? "n/a"}</span>
+                  <span className="rounded-lg border border-edge bg-ink/20 px-3 py-2">rows: {report.explain_diff_summary.row_estimate_delta ?? "n/a"}</span>
+                </div>
+                {report.explain_diff_summary.access_path_delta && (
+                  <p className="mt-2 text-sm text-primary">{report.explain_diff_summary.access_path_delta}</p>
+                )}
+              </div>
+            )}
+
+            {report.regression_timeline && (
+              <div className="surface-2 p-4">
+                <p className="text-2xs uppercase tracking-widest text-muted font-mono">regression timeline</p>
+                <p className="mt-2 text-sm text-primary leading-relaxed">{report.regression_timeline}</p>
+              </div>
+            )}
+
+            {report.evidence_citations.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-2xs uppercase tracking-widest text-muted font-mono">citations</p>
+                  <span className="text-2xs text-muted font-mono">{report.evidence_citations.length} grounded citation{report.evidence_citations.length === 1 ? "" : "s"}</span>
+                </div>
+                <div className="mt-3 grid gap-3">
+                  {report.evidence_citations.map((citation) => (
+                    <article key={`${citation.signal}-${citation.source}`} className="rounded-xl border border-edge bg-panel-2/60 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-primary">{citation.signal}</p>
+                        <span className="text-2xs font-mono uppercase tracking-wider text-muted">{citation.source}</span>
+                      </div>
+                      <p className="mt-2 text-sm text-secondary font-mono">{citation.observed_value}</p>
+                      <p className="mt-2 text-sm text-muted leading-relaxed">{citation.rationale}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {report.unsupported_claims.length > 0 && (
+              <div className="rounded-xl border border-bad/30 bg-bad/10 px-4 py-3">
+                <p className="text-2xs uppercase tracking-widest text-bad font-mono">guardrails</p>
+                <ul className="mt-2 space-y-1 text-sm text-primary">
+                  {report.unsupported_claims.map((claim) => (
+                    <li key={claim}>{claim}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="surface-2 p-4">

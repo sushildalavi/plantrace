@@ -251,13 +251,54 @@ class InvestigationEvidenceOut(BaseModel):
     why_it_matters: str
 
 
+class EvidenceCitation(BaseModel):
+    signal: str
+    source: str
+    observed_value: str
+    rationale: str
+
+
+class ExplainDiffSummary(BaseModel):
+    previous_shape: str | None = None
+    current_shape: str | None = None
+    plan_delta: str
+    row_estimate_delta: str | None = None
+    access_path_delta: str | None = None
+
+
+class QueryRewriteSuggestion(BaseModel):
+    title: str
+    rationale: str
+    sql: str | None = None
+
+
+class IndexRecommendation(BaseModel):
+    title: str
+    rationale: str
+    sql: str | None = None
+    operator_class: str | None = None
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
 class QueryInvestigationOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     summary: str
     risk_level: Literal["low", "medium", "high"]
     confidence: float = Field(ge=0.0, le=1.0)
+    remediation_priority: Literal["p0", "p1", "p2", "p3"] = "p2"
+    root_cause: str | None = None
+    why_this_changed: str | None = None
+    regression_timeline: str | None = None
+    affected_query_fingerprint_summary: str | None = None
+    explain_diff_summary: ExplainDiffSummary | None = None
+    query_rewrite_suggestion: QueryRewriteSuggestion | None = None
+    index_recommendation: IndexRecommendation | None = None
+    evidence_citations: list[EvidenceCitation] = Field(default_factory=list)
     likely_causes: list[str] = Field(default_factory=list)
     evidence: list[InvestigationEvidenceOut] = Field(default_factory=list)
     suggested_actions: list[str] = Field(default_factory=list)
+    unsupported_claims: list[str] = Field(default_factory=list)
     insufficient_evidence: bool = False
 
 

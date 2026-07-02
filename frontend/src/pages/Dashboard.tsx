@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Database,
   Gauge,
+  Activity as ActivityIcon,
   ListOrdered,
   Play,
   Sparkles,
@@ -105,6 +106,10 @@ export function Dashboard() {
 
   const topTypes = topRegressionTypes(regressions);
   const topTypeMax = Math.max(1, ...topTypes.map(([, n]) => n));
+  const heatmapRows = queries
+    .slice()
+    .sort((a, b) => (b.latest_mean_ms ?? 0) - (a.latest_mean_ms ?? 0))
+    .slice(0, 12);
 
   return (
     <div className="space-y-8">
@@ -194,8 +199,8 @@ export function Dashboard() {
               <div className="px-5 pt-4 pb-2">
                 <LatencyChart
                   points={latencyPoints}
-                  dataKey="mean_exec_time_ms"
-                  color="#f59e0b"
+              dataKey="mean_exec_time_ms"
+                  color="#4ea1ff"
                   unit="ms"
                   height={220}
                 />
@@ -270,6 +275,69 @@ export function Dashboard() {
           </div>
         </Spotlight>
       </div>
+
+      <Section
+        icon={ActivityIcon}
+        title="Query heatmap"
+        hint="higher intensity means slower mean latency and more regression pressure"
+      >
+        <div className="p-5">
+          {heatmapRows.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-edge bg-panel-2/50 px-4 py-8 text-sm text-muted">
+              No query telemetry yet. Run the collector to populate the heatmap.
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {heatmapRows.map((q, index) => {
+                const intensity = Math.min(1, (q.latest_mean_ms ?? 0) / 250);
+                return (
+                  <article
+                    key={q.id}
+                    className="group rounded-2xl border border-edge bg-panel-2/60 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-edge-bright"
+                    style={{
+                      backgroundImage: `linear-gradient(135deg, rgba(78,161,255,${0.06 + intensity * 0.18}), rgba(45,212,191,${0.04 + intensity * 0.08}))`,
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-2xs uppercase tracking-widest text-muted font-mono">
+                          fp {index + 1}
+                        </p>
+                        <p className="mt-1 max-h-10 overflow-hidden text-sm text-primary font-mono">
+                          {q.normalized_query}
+                        </p>
+                      </div>
+                      <span className="inline-flex rounded-full border border-edge bg-ink/40 px-2 py-1 text-2xs font-mono text-muted">
+                        {q.regression_count} regs
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-2xs font-mono text-muted">
+                      <div>
+                        <span className="block uppercase tracking-widest">latency</span>
+                        <span className="mt-1 block text-sm text-primary num">
+                          {q.latest_mean_ms?.toFixed(2) ?? "—"} ms
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block uppercase tracking-widest">calls</span>
+                        <span className="mt-1 block text-sm text-primary num">
+                          {q.latest_calls?.toLocaleString() ?? "—"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block uppercase tracking-widest">signal</span>
+                        <span className={`mt-1 block text-sm num ${q.latest_mean_ms && q.latest_mean_ms > 150 ? "text-bad" : q.latest_mean_ms && q.latest_mean_ms > 50 ? "text-warn" : "text-ok"}`}>
+                          {q.latest_mean_ms && q.latest_mean_ms > 150 ? "hot" : q.latest_mean_ms && q.latest_mean_ms > 50 ? "warm" : "stable"}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Section>
 
       <Section
         icon={AlertTriangle}
