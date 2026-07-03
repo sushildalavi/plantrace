@@ -2,22 +2,26 @@
 renders them as a readable paragraph.
 
 Two rendering paths:
-1. Template (default, zero config) — deterministic string built from facts.
-2. LLM (optional) — sends findings to an OpenAI-compatible endpoint. Falls
-   back to template on any error so the feature always works.
+1. Template (default, zero config) - deterministic string built from facts.
+2. LLM (optional) - sends validated findings through the same provider
+   abstraction used by the copilot. Falls back to template on any error so the
+   feature always works.
 
-The AI layer never determines regressions.  It only reformats findings that
-the detector already produced.
+The AI layer never determines regressions. It only reformats findings that the
+detector already produced.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any
 
-import httpx
+from langchain_core.prompts import ChatPromptTemplate
 
+from app.ai.providers import build_gemini_provider, build_ollama_candidates, build_openai_provider
 from app.config import settings
 from app.models import QueryFingerprint, QueryMetric, QueryPlan, QueryRegression
 
@@ -33,6 +37,13 @@ Rules:
 - Never say "this will fix" or "create this index and the problem goes away".
 - Do not mention that you are an AI or a language model.
 """
+
+LLM_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", LLM_SYSTEM_PROMPT),
+        ("human", "{findings_json}"),
+    ]
+)
 
 
 # ---------------------------------------------------------------------------
@@ -104,33 +115,81 @@ def _template(findings: dict[str, Any]) -> str:
     return summary
 
 
+def _provider_candidates() -> list[Any]:
+    provider = settings.AI_PROVIDER.lower().strip()
+    providers: list[Any] = []
+    if provider in {"auto", "openai"} or settings.OPENAI_API_KEY:
+        if settings.OPENAI_API_KEY:
+            providers.append(
+                build_openai_provider(
+                    model_name=settings.LLM_MODEL,
+                    api_key=settings.OPENAI_API_KEY,
+                    base_url=settings.OPENAI_BASE_URL,
+                )
+            )
+    if provider in {"auto", "gemini"} or settings.GEMINI_API_KEY:
+        if settings.GEMINI_API_KEY:
+            providers.append(
+                build_gemini_provider(
+                    model_name=settings.GEMINI_MODEL,
+                    api_key=settings.GEMINI_API_KEY,
+                )
+            )
+    if provider in {"auto", "ollama"}:
+        providers.extend(
+            build_ollama_candidates(
+                model_name=settings.AI_MODEL,
+                fallback_model=settings.AI_FALLBACK_MODEL,
+                base_url=settings.OLLAMA_BASE_URL,
+            )
+        )
+    return providers
+
+
+def _as_text(output: Any) -> str:
+    if isinstance(output, str):
+        return output.strip()
+    if hasattr(output, "content"):
+        return str(output.content).strip()
+    return str(output).strip()
+
+
 def _llm(findings: dict[str, Any]) -> str:
-    url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/chat/completions"
-    payload = {
-        "model": settings.LLM_MODEL,
-        "messages": [
-            {"role": "system", "content": LLM_SYSTEM_PROMPT},
-            {"role": "user", "content": json.dumps(findings, indent=2)},
-        ],
-        "temperature": 0.2,
-        "max_tokens": 300,
-    }
-    headers = {
-        "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    try:
-        resp = httpx.post(url, json=payload, headers=headers, timeout=15.0)
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as exc:
-        log.warning("llm call failed, falling back to template: %s", exc)
+    providers = _provider_candidates()
+    if not providers:
         return _template(findings)
+
+    inputs = {
+        "findings_json": json.dumps(findings, indent=2, sort_keys=True),
+    }
+    last_error: Exception | None = None
+    for provider in providers:
+        chain = LLM_PROMPT | provider.runnable()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(chain.invoke, inputs)
+            try:
+                return _as_text(future.result(timeout=15.0))
+            except FuturesTimeoutError as exc:
+                future.cancel()
+                last_error = exc
+            except Exception as exc:
+                last_error = exc
+                continue
+
+    log.warning("llm call failed, falling back to template: %s", last_error)
+    return _template(findings)
 
 
 def render_report(findings: dict[str, Any]) -> tuple[str, str | None]:
     """Return (generated_text, model_name_or_None)."""
-    if settings.LLM_ENABLED and settings.OPENAI_API_KEY:
+    if settings.LLM_ENABLED and _provider_candidates():
         text_out = _llm(findings)
-        return text_out, settings.LLM_MODEL
+        model_name = (
+            settings.LLM_MODEL
+            if settings.OPENAI_API_KEY
+            else settings.GEMINI_MODEL
+            if settings.GEMINI_API_KEY
+            else settings.AI_MODEL
+        )
+        return text_out, model_name
     return _template(findings), None
