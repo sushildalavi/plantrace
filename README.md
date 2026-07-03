@@ -1,19 +1,83 @@
-# PlanTrace | Agentic SQL Diagnostics & Workload Intelligence Platform
+# PlanTrace
 
-PlanTrace is a local database systems project focused on PostgreSQL query telemetry, EXPLAIN ANALYZE diagnostics, optimizer regression detection, an evidence-grounded Query Regression Investigator, and a synthetic multi-tenant SQL placement simulator.
+PlanTrace is an AI-powered SQL performance intelligence platform for PostgreSQL workloads.
+It combines C++ telemetry collection, Kafka streaming, FastAPI diagnostics, Supabase-hosted PostgreSQL + pgvector, a LangChain review layer with OpenAI/Gemini/Ollama adapters, a React dashboard deployable on Vercel, and Prometheus/Grafana observability.
 
-The frontend now has a public product-style landing page at `/`, a workspace shell at `/app`, a query telemetry view at `/app/queries`, regression and placement views, a saved reports hub, and a `/learn` page that explains the architecture and demo mode.
+## Architecture
 
-GitHub About / description: `SQL Query Diagnostics & Workload Optimization Platform`
+```mermaid
+flowchart LR
+    A[C++ telemetry collector] --> B[Kafka workload stream]
+    B --> C[FastAPI diagnostics backend]
+    C --> D[Supabase-hosted PostgreSQL + pgvector]
+    D --> E[LangChain review layer]
+    E --> F[OpenAI / Gemini / Ollama adapters]
+    F --> G[React dashboard on Vercel]
+    C --> H[Prometheus metrics]
+    H --> I[Grafana dashboards]
+```
 
-It is intentionally honest in scope:
+Local development uses the same shape with Docker Compose:
 
-- PostgreSQL query telemetry and plan capture are real
-- Optimizer regression detection is deterministic
-- The Query Regression Investigator is evidence-grounded and can run with a fake provider in CI or local Ollama when enabled
-- Placement is a simulated what-if engine over synthetic tenant telemetry
-- It is not a production Azure SQL deployment and does not claim to manage live cloud clusters
-- The backend still uses the internal `querylens` schema and `querylens_*` metrics for compatibility; the public project name is PlanTrace
+- C++ collector
+- Redpanda Kafka-compatible stream
+- FastAPI backend
+- PostgreSQL/pgvector local stack or Supabase connection
+- React UI
+- Prometheus + Grafana
+
+## What It Does
+
+- Fingerprints normalized SQL so semantically identical statements collapse to one hash
+- Captures metrics and EXPLAIN evidence for query regression analysis
+- Detects deterministic regressions:
+  - row-estimate mismatch
+  - sequential-scan fallback
+  - missing index candidate
+  - temp / sort / hash spill
+  - nested-loop explosion
+  - pgvector / HNSW bypass
+  - vector operator mismatch
+  - cost spike
+  - call spike
+- Runs an AI SQL Copilot that returns:
+  - root-cause explanation
+  - query rewrite suggestion
+  - index recommendation
+  - EXPLAIN diff summary
+  - confidence score
+  - evidence citations
+  - unsupported-claim guardrails
+  - remediation priority
+  - regression timeline explanation
+  - affected fingerprint summary
+- Simulates multi-tenant placement strategies:
+  - first-fit
+  - greedy best-fit
+  - weighted scoring
+  - local-search rebalancer
+  - simulated annealing
+
+## Deployment Topology
+
+- Backend API: FastAPI
+- Database: Supabase-hosted PostgreSQL with pgvector for the hosted architecture
+- Review layer: LangChain with optional OpenAI, Gemini, or Ollama adapters
+- Frontend: React app deployed on Vercel
+- Metrics: Prometheus and Grafana
+
+Environment variables for hosted use:
+
+```bash
+SUPABASE_DATABASE_URL=postgresql+psycopg://...
+VITE_API_BASE_URL=https://your-backend.example.com
+AI_PROVIDER=auto
+OPENAI_API_KEY=
+GEMINI_API_KEY=
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+The backend falls back to `DATABASE_URL` when `SUPABASE_DATABASE_URL` is not set.
 
 ## Local Preview
 
@@ -22,57 +86,7 @@ It is intentionally honest in scope:
 - Prometheus: [http://localhost:9090](http://localhost:9090)
 - Grafana: [http://localhost:3000](http://localhost:3000)
 
-## Architecture
-
-```mermaid
-flowchart LR
-    A[(PostgreSQL)] --> B[C++ collector]
-    B --> C[(Redpanda / Kafka)]
-    C --> D[FastAPI ingestion + diagnostics]
-    D --> E[(PostgreSQL query store)]
-    D --> F[React dashboard]
-    D --> G[Prometheus / Grafana]
-    F --> H[Placement simulator]
-    H --> I[Synthetic tenant telemetry]
-    D --> J[LangChain / LangGraph investigator]
-    J --> K[Optional Ollama model]
-```
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the grounded version of this map.
-
-## What it does
-
-- Fingerprints normalized SQL so semantically identical statements collapse to one hash
-- Captures query metrics and EXPLAIN JSON / EXPLAIN ANALYZE evidence
-- Detects deterministic optimizer regressions:
-  - row-estimate mismatch
-  - sequential-scan fallback
-  - missing index candidates
-  - temp / sort / hash spill
-  - nested-loop explosion
-  - pgvector / HNSW bypass
-- Stores query plans, regressions, and diagnostic findings in PostgreSQL
-- Streams telemetry through Kafka / Redpanda with bounded retry and DLQ handling
-- Runs an AI SQL Copilot / Query Regression Investigator that compacts telemetry, validates structured output, explains root cause and EXPLAIN diffs, suggests rewrites and index guidance, and falls back safely when evidence is thin
-- Simulates multi-tenant placement strategies:
-  - first-fit baseline
-  - greedy best-fit
-  - weighted scoring
-  - local-search rebalancer
-  - simulated annealing
-
-## Layout
-
-- `backend/` FastAPI service, collector, diagnostics, placement simulator, migrations, and tests
-- `collector/` C++ telemetry collector
-- `frontend/` React product site plus dashboard workspace
-- `docs/` architecture, demo, operations, regression rules, and benchmark notes
-- `scripts/` benchmark and evaluation helpers
-- `infra/` Postgres init SQL and Prometheus config
-
-## Quick Start
-
-Requires Python 3.11+ and Node 20+.
+## Setup
 
 ```bash
 make setup
@@ -84,26 +98,24 @@ make test
 make demo
 ```
 
-## Core Screens
+## Verification Snapshot
 
-- Landing page: public product story, architecture summary, demo preview, and validation snapshot
-- Workspace overview: query latency, regressions, collector status
-- Query telemetry: fingerprint detail, plan tree, recommendations, diagnostics, report generation, and the Query Regression Investigator
-- Regressions: deterministic regression feed
-- Placement simulator: synthetic tenant telemetry and before/after placement comparison
-- Reports: saved investigation outputs when they exist
-- Learn: route map, demo mode, and architecture notes
+Current checked-in proof in this branch:
 
-Screenshots live under [docs/screenshots](docs/screenshots/).
+- Backend tests: 70 passed
+- Frontend build: passed
+- AI investigator eval: 12 golden cases, schema validity 1.0, evidence coverage 1.0, unsupported claim rate 0.0, recommendation relevance 1.0
+- Regression eval: 9 scenarios, precision 1.0, recall 1.0, F1 1.0
+- Placement eval: 4 scenarios, 5 algorithms, synthetic what-if only
+- Synthetic benchmark artifacts: 10K, 50K, 100K local runs plus pending 250K, 500K, and 1M presets
 
-## Demo Flow
+Benchmark and eval outputs are written to `backend/benchmark_results/`.
 
-- Open `/` for the public landing page
-- Open `/app?demo=1` to see the workspace with a visible demo mode banner
-- Open `/app/queries`, `/app/regressions`, `/app/placement`, and `/app/reports` for the product workspace
-- Open `/learn` for the architecture and demo explanation page
+## Screenshots
 
-## API Examples
+Rendered screenshots and captures live under `docs/screenshots/` as image assets.
+
+## API
 
 ```bash
 curl http://localhost:8201/health
@@ -117,70 +129,28 @@ curl -X POST http://localhost:8201/api/placement/simulate \
   -d '{"seed":42,"tenants":48,"regions":3,"clusters_per_region":2,"nodes_per_cluster":3}'
 ```
 
-## Benchmark Methodology
-
-The benchmark workflow is documented in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
-
-In short:
-
-- telemetry benchmark events are produced into Kafka
-- the backend consumer measures ingest latency, lag, duplicates, and DLQ counts
-- regression detection uses deterministic seeded scenarios
-- placement simulation is evaluated on synthetic tenant telemetry, not live customer clusters
-
-Canonical benchmark summary:
-
-- [docs/BENCHMARK_SUMMARY.md](docs/BENCHMARK_SUMMARY.md)
-- [backend/benchmark_results/canonical_benchmark_summary.json](backend/benchmark_results/canonical_benchmark_summary.json)
-
-Evaluation proof:
-
-- [backend/benchmark_results/regression_eval.json](backend/benchmark_results/regression_eval.json)
-- [backend/benchmark_results/placement_eval.json](backend/benchmark_results/placement_eval.json)
-- [backend/benchmark_results/query_investigator_eval.json](backend/benchmark_results/query_investigator_eval.json)
-
-Implemented vs not implemented:
-
-- [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)
-
 ## Testing
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -v
-cd backend && .venv/bin/ruff check app tests
+cd backend && python -m pytest tests -v
+cd backend && ruff check app tests
 cd frontend && npm run build
-python scripts/evaluate_query_investigator.py
+python scripts/evaluate_query_investigator.py --provider fake
+python scripts/evaluate_placement.py
+python scripts/generate_benchmark_summary.py
 ```
 
-One-command local demo:
+## Limits
 
-```bash
-make demo
-```
-
-## Query Regression Investigator
-
-The investigator reads query fingerprints, latency trends, regression records, and diagnostics, then returns a structured report with summary, root cause, EXPLAIN diff, remediation priority, likely causes, evidence, citations, rewrite guidance, and suggested actions.
-
-- Default mode: `AI_PROVIDER=disabled`
-- Optional OpenAI mode: set `OPENAI_API_KEY` and `AI_PROVIDER=openai` or `auto`
-- Optional Gemini mode: set `GEMINI_API_KEY` and `AI_PROVIDER=gemini` or `auto`
-- Local Ollama mode: set `AI_PROVIDER=ollama`, `OLLAMA_BASE_URL=http://localhost:11434`, `AI_MODEL=qwen2.5-coder:7b`, and optionally `AI_FALLBACK_MODEL=llama3.1:8b`
-- CI mode: fake provider tests exercise the full workflow without requiring Ollama
-- Evaluation: `python scripts/evaluate_query_investigator.py --provider fake`
-
-More setup details live in [docs/AI_INVESTIGATOR.md](docs/AI_INVESTIGATOR.md).
+- Placement simulation is synthetic and does not control live Azure resources
+- The review layer is evidence-grounded and does not invent unsupported claims
+- The hosted architecture assumes a separate backend deployment and a Vercel frontend
+- The benchmark outputs are synthetic telemetry artifacts, not production throughput claims
 
 ## Resume-Ready Summary
 
-Built a database telemetry platform that streams PostgreSQL query events from a C++ collector through Kafka into FastAPI and React dashboards for query debugging, optimizer regression analysis, and synthetic placement simulation.
-
-Implemented deterministic EXPLAIN ANALYZE diagnostics and query fingerprinting to detect row-estimate mismatch, sequential-scan fallbacks, temp spills, nested-loop explosions, missing index candidates, vector operator mismatches, and pgvector/HNSW bypass patterns.
-
-Added a synthetic multi-tenant placement engine with first-fit, greedy best-fit, weighted scoring, local-search, and simulated-annealing strategies to compare overloaded-node counts, utilization balance, migration cost, hotspot reduction, headroom, tenant skew, and p95 placement latency.
-
-Added an evidence-grounded AI SQL Copilot that uses LangChain/LangGraph with optional OpenAI, Gemini, or Ollama support and a fake provider path for tests and CI.
-
-## Screenshot Plan
-
-See [docs/screenshots/README.md](docs/screenshots/README.md) for the current screenshot and GIF placeholders.
+- Built a PostgreSQL telemetry platform that streams query events from a C++ collector through Kafka into FastAPI diagnostics and React dashboards
+- Added an AI SQL Copilot with grounded explanations, rewrites, index guidance, and strict output validation across OpenAI, Gemini, and Ollama adapters
+- Implemented deterministic EXPLAIN diagnostics and regression detection for row-estimate mismatch, temp spill, nested-loop explosion, vector search regressions, and more
+- Added a synthetic multi-tenant placement engine with multiple strategies and quantitative comparison metrics
+- Produced benchmark and eval artifacts that back the claims in this repository
