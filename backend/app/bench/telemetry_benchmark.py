@@ -85,7 +85,7 @@ def metric_deltas(before: dict[str, float], after: dict[str, float]) -> dict[str
 
 
 def acquire_benchmark_lock() -> None:
-    engine = create_engine(settings.DATABASE_URL, future=True)
+    engine = create_engine(settings.effective_database_url, future=True)
     with engine.begin() as conn:
         ok = conn.execute(text("SELECT pg_try_advisory_lock(42424242)")).scalar_one()
     engine.dispose()
@@ -94,14 +94,14 @@ def acquire_benchmark_lock() -> None:
 
 
 def release_benchmark_lock() -> None:
-    engine = create_engine(settings.DATABASE_URL, future=True)
+    engine = create_engine(settings.effective_database_url, future=True)
     with engine.begin() as conn:
         conn.execute(text("SELECT pg_advisory_unlock(42424242)"))
     engine.dispose()
 
 
 def cleanup_old_benchmark_rows() -> None:
-    engine = create_engine(settings.DATABASE_URL, future=True)
+    engine = create_engine(settings.effective_database_url, future=True)
     with engine.begin() as conn:
         fp_ids = conn.execute(
             text(
@@ -137,7 +137,7 @@ def cleanup_old_benchmark_rows() -> None:
 
 
 def fetch_latencies(run_id: str) -> list[float]:
-    engine = create_engine(settings.DATABASE_URL, future=True)
+    engine = create_engine(settings.effective_database_url, future=True)
     q = text(
         """
         SELECT EXTRACT(EPOCH FROM (m.ingested_at - m.captured_at)) * 1000.0 AS lag_ms
@@ -153,7 +153,7 @@ def fetch_latencies(run_id: str) -> list[float]:
 
 
 def fetch_count(run_id: str) -> int:
-    engine = create_engine(settings.DATABASE_URL, future=True)
+    engine = create_engine(settings.effective_database_url, future=True)
     q = text(
         """
         SELECT count(*)
