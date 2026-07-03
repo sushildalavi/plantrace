@@ -93,24 +93,6 @@ def main() -> None:
     json_path = out_dir / "placement_eval.json"
     csv_path = out_dir / "placement_eval.csv"
     json_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
-    (out_dir / "placement_eval.md").write_text(
-        "\n".join(
-            [
-                "# Placement Evaluation",
-                "",
-                f"- scenarios: {summary['scenarios']}",
-                f"- algorithms: {summary['algorithms']}",
-                f"- best balance improvement: {summary['best_balance_improvement']}",
-                f"- best hotspot reduction: {summary['best_hotspot_reduction']}",
-                f"- best overloaded reduction: {summary['best_overloaded_reduction']}",
-                f"- best score improvement: {summary['best_score_improvement']}",
-                f"- best headroom improvement: {summary['best_headroom_improvement']}",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
     with csv_path.open("w", newline="") as f:
         fieldnames = [
             "scenario_seed",
@@ -146,22 +128,6 @@ def main() -> None:
         for row in summary["rows"]:
             scenario_name = f"scenario_seed_{row['scenario']['seed']}"
             (scenario_dir / f"{scenario_name}.json").write_text(json.dumps(row, indent=2) + "\n", encoding="utf-8")
-            (scenario_dir / f"{scenario_name}.md").write_text(
-                "\n".join(
-                    [
-                        f"# Placement Scenario {row['scenario']['seed']}",
-                        "",
-                        f"- tenants: {row['scenario']['tenants']}",
-                        f"- regions: {row['scenario']['regions']}",
-                        f"- best algorithm: {row['best_algorithm']}",
-                        f"- best balance: {row['best_balance']}",
-                        f"- best hotspot reduction: {row['best_hotspot_reduction']}",
-                        f"- best overloaded reduction: {row['best_overloaded_reduction']}",
-                    ]
-                )
-                + "\n",
-                encoding="utf-8",
-            )
 
     print(json.dumps(summary, indent=2))
 

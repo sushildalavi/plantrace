@@ -2,7 +2,7 @@ groups:
   - name: plantrace-alerts
     rules:
       - alert: PlanTraceHighConsumerLag
-        expr: max(querylens_kafka_consumer_lag) > 100
+        expr: max(plantrace_kafka_consumer_lag) > 100
         for: 2m
         labels:
           severity: warning
@@ -10,7 +10,7 @@ groups:
           summary: "PlanTrace consumer lag is high"
 
       - alert: PlanTracePersistenceFailures
-        expr: increase(querylens_telemetry_persist_failures_total[5m]) > 0
+        expr: increase(plantrace_telemetry_persist_failures_total[5m]) > 0
         for: 1m
         labels:
           severity: critical
@@ -18,7 +18,7 @@ groups:
           summary: "PlanTrace persistence failures detected"
 
       - alert: PlanTraceDLQEvents
-        expr: increase(querylens_dlq_events_total[5m]) > 0
+        expr: increase(plantrace_dlq_events_total[5m]) > 0
         for: 1m
         labels:
           severity: warning
@@ -26,7 +26,7 @@ groups:
           summary: "PlanTrace routed events to DLQ"
 
       - alert: PlanTraceCriticalRegressions
-        expr: increase(querylens_regression_events_total{severity="critical"}[10m]) > 0
+        expr: increase(plantrace_regression_events_total{severity="critical"}[10m]) > 0
         for: 1m
         labels:
           severity: warning
@@ -34,7 +34,7 @@ groups:
           summary: "Critical regressions detected"
 
       - alert: PlanTraceHighApiP95
-        expr: histogram_quantile(0.95, sum by (le) (rate(querylens_api_request_latency_seconds_bucket[5m]))) > 0.5
+        expr: histogram_quantile(0.95, sum by (le) (rate(plantrace_api_request_latency_seconds_bucket[5m]))) > 0.5
         for: 5m
         labels:
           severity: warning

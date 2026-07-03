@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package querylens.telemetry.v1;
+package plantrace.telemetry.v1;
 
 message QueryTelemetryEvent {
   string database_name = 1;

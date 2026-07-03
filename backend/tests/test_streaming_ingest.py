@@ -6,7 +6,7 @@ from app.streaming.ingest import event_id_for, ingest_query_event
 
 def test_ingest_query_event_persists_snapshot(db_session):
     event = {
-        "database_name": "querylens",
+        "database_name": "plantrace",
         "environment": "test",
         "service_id": "collector-test",
         "query_fingerprint": "abc123",
@@ -32,7 +32,7 @@ def test_ingest_query_event_persists_snapshot(db_session):
 
 def test_ingest_query_event_duplicate_is_skipped(db_session):
     event = {
-        "database_name": "querylens",
+        "database_name": "plantrace",
         "environment": "test",
         "service_id": "collector-test",
         "query_fingerprint": "dup-fp-1",

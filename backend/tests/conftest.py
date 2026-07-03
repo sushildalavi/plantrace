@@ -70,7 +70,7 @@ def test_engine(db_url: str):
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_stat_statements"))
-        conn.execute(text("CREATE SCHEMA IF NOT EXISTS querylens"))
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS plantrace"))
 
     env = {**os.environ, "DATABASE_URL": db_url}
     result = subprocess.run(

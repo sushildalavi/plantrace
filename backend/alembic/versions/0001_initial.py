@@ -1,4 +1,4 @@
-"""initial querylens schema
+"""initial plantrace schema
 
 Revision ID: 0001_initial
 Revises:
@@ -16,7 +16,7 @@ down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-SCHEMA = "querylens"
+SCHEMA = "plantrace"
 
 
 def upgrade() -> None:

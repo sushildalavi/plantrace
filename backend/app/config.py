@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+psycopg://querylens:querylens@db:5432/querylens"
+    DATABASE_URL: str = "postgresql+psycopg://plantrace:plantrace@db:5432/plantrace"
     SUPABASE_DATABASE_URL: str = ""
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     KAFKA_ENABLED: bool = False
     KAFKA_BOOTSTRAP_SERVERS: str = "kafka:9092"
-    KAFKA_GROUP_ID: str = "querylens-control-plane"
+    KAFKA_GROUP_ID: str = "plantrace-control-plane"
     KAFKA_TOPIC_QUERY_TELEMETRY: str = "query-telemetry"
     KAFKA_TOPIC_COLLECTOR_HEARTBEAT: str = "collector-heartbeats"
     KAFKA_TOPIC_TELEMETRY_DLQ: str = "telemetry-dlq"

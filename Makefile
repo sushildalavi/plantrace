@@ -37,10 +37,10 @@ demo: up
 	@sleep 6
 	$(MAKE) migrate
 	$(MAKE) seed
-	docker compose exec -T db psql -U querylens -d querylens -c "SELECT pg_stat_statements_reset();" >/dev/null
-	docker compose exec -T db psql -U querylens -d querylens -c "TRUNCATE querylens.query_regressions, querylens.query_reports, querylens.query_plans, querylens.query_metrics, querylens.query_fingerprints, querylens.collector_status CASCADE;" >/dev/null
-	docker compose exec -T db psql -U querylens -d querylens -c "CREATE INDEX IF NOT EXISTS orders_user_id_idx ON demo.orders(user_id);" >/dev/null
-	docker compose exec -T db psql -U querylens -d querylens -c "CREATE INDEX IF NOT EXISTS vector_items_embedding_hnsw_idx ON demo.vector_items USING hnsw (embedding vector_l2_ops);" >/dev/null
+	docker compose exec -T db psql -U plantrace -d plantrace -c "SELECT pg_stat_statements_reset();" >/dev/null
+	docker compose exec -T db psql -U plantrace -d plantrace -c "TRUNCATE plantrace.query_regressions, plantrace.query_reports, plantrace.query_plans, plantrace.query_metrics, plantrace.query_fingerprints, plantrace.collector_status CASCADE;" >/dev/null
+	docker compose exec -T db psql -U plantrace -d plantrace -c "CREATE INDEX IF NOT EXISTS orders_user_id_idx ON demo.orders(user_id);" >/dev/null
+	docker compose exec -T db psql -U plantrace -d plantrace -c "CREATE INDEX IF NOT EXISTS vector_items_embedding_hnsw_idx ON demo.vector_items USING hnsw (embedding vector_l2_ops);" >/dev/null
 	docker compose exec backend python -m app.demo.workload --iterations 500 --no-drop-index
 	$(MAKE) collect-cpp
 	@echo "--- baseline collected from C++ collector ---"
@@ -50,8 +50,8 @@ demo: up
 	@echo "open http://localhost:5172 and http://localhost:3000"
 
 demo-reset:
-	docker compose exec -T db psql -U querylens -d querylens -c "SELECT pg_stat_statements_reset();" >/dev/null
-	docker compose exec -T db psql -U querylens -d querylens -c "TRUNCATE querylens.query_regressions, querylens.query_reports, querylens.query_plans, querylens.query_metrics, querylens.query_fingerprints, querylens.collector_status CASCADE;" >/dev/null
+	docker compose exec -T db psql -U plantrace -d plantrace -c "SELECT pg_stat_statements_reset();" >/dev/null
+	docker compose exec -T db psql -U plantrace -d plantrace -c "TRUNCATE plantrace.query_regressions, plantrace.query_reports, plantrace.query_plans, plantrace.query_metrics, plantrace.query_fingerprints, plantrace.collector_status CASCADE;" >/dev/null
 
 test: test-backend test-collector test-frontend
 

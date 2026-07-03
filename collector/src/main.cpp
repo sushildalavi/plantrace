@@ -40,7 +40,7 @@ SELECT query, calls, total_exec_time, mean_exec_time, rows,
        shared_blks_hit, shared_blks_read, temp_blks_read, temp_blks_written
 FROM pg_stat_statements
 WHERE query NOT ILIKE '%pg_stat_statements%'
-  AND query NOT ILIKE '%querylens.%'
+  AND query NOT ILIKE '%plantrace.%'
   AND mean_exec_time >= $1
 ORDER BY mean_exec_time DESC
 )",
@@ -63,7 +63,7 @@ ORDER BY mean_exec_time DESC
 }
 
 void print_help() {
-  std::cout << "querylens-collector options via env vars:\n"
+  std::cout << "plantrace-collector options via env vars:\n"
             << "COLLECTOR_DSN, COLLECTOR_ENVIRONMENT, COLLECTOR_SERVICE_ID,\n"
             << "COLLECTOR_MIN_MEAN_MS, COLLECTOR_EXPLAIN_TIMEOUT_MS,\n"
             << "COLLECTOR_STDOUT_MODE, KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC_QUERY_TELEMETRY\n";
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  const std::string dsn = env_or("COLLECTOR_DSN", "postgresql://querylens:querylens@db:5432/querylens");
+  const std::string dsn = env_or("COLLECTOR_DSN", "postgresql://plantrace:plantrace@db:5432/plantrace");
   const std::string environment = env_or("COLLECTOR_ENVIRONMENT", "local");
   const std::string service_id = env_or("COLLECTOR_SERVICE_ID", "collector-cpp");
   const double min_mean_ms = std::stod(env_or("COLLECTOR_MIN_MEAN_MS", "0"));
@@ -109,8 +109,8 @@ int main(int argc, char **argv) {
       std::string vec_op = ql::detect_vector_operator(norm);
       auto explain = ql::run_explain_json(dsn, r.query, explain_timeout_ms);
 
-      querylens::telemetry::v1::QueryTelemetryEvent evt;
-      evt.set_database_name("querylens");
+      plantrace::telemetry::v1::QueryTelemetryEvent evt;
+      evt.set_database_name("plantrace");
       evt.set_environment(environment);
       evt.set_service_id(service_id);
       evt.set_query_fingerprint(fp);
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 
       std::string payload;
       evt.SerializeToString(&payload);
-      std::string key = "querylens:" + environment + ":" + fp;
+      std::string key = "plantrace:" + environment + ":" + fp;
 
       if (stdout_mode) {
         std::cout << key << " " << evt.ShortDebugString() << "\n";

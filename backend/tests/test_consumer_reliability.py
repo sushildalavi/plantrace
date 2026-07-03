@@ -56,7 +56,7 @@ async def test_retry_then_success(monkeypatch):
     monkeypatch.setattr(consumer_mod, "ingest_query_event", fake_ingest)
 
     msg = telemetry_pb2.QueryTelemetryEvent(
-        database_name="querylens",
+        database_name="plantrace",
         environment="test",
         service_id="c1",
         query_fingerprint="abc",
@@ -84,7 +84,7 @@ async def test_final_failure_routes_to_dlq(monkeypatch):
     monkeypatch.setattr(consumer_mod, "ingest_query_event", always_fail)
 
     msg = telemetry_pb2.QueryTelemetryEvent(
-        database_name="querylens",
+        database_name="plantrace",
         environment="test",
         service_id="c1",
         query_fingerprint="abc",

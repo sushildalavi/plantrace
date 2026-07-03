@@ -15,5 +15,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=build /app/build/querylens-collector /usr/local/bin/querylens-collector
-ENTRYPOINT ["querylens-collector"]
+COPY --from=build /app/build/plantrace-collector /usr/local/bin/plantrace-collector
+ENTRYPOINT ["plantrace-collector"]

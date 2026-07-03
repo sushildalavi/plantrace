@@ -31,7 +31,7 @@ async def produce_events(run_id: str, n: int):
             ts = datetime.now(UTC).isoformat().replace("+00:00", "Z")
             fp = f"bench-{run_id}-{i}"
             evt = telemetry_pb2.QueryTelemetryEvent(
-                database_name="querylens",
+                database_name="plantrace",
                 environment=settings.ENVIRONMENT,
                 service_id="bench-producer",
                 query_fingerprint=fp,
@@ -49,7 +49,7 @@ async def produce_events(run_id: str, n: int):
                 captured_at=ts,
             )
             payload = evt.SerializeToString()
-            key = f"querylens:{settings.ENVIRONMENT}:{fp}".encode()
+            key = f"plantrace:{settings.ENVIRONMENT}:{fp}".encode()
             await producer.send_and_wait(settings.KAFKA_TOPIC_QUERY_TELEMETRY, payload, key=key)
         await producer.flush()
         finished = time.perf_counter()
@@ -65,13 +65,13 @@ def poll_metrics() -> dict[str, float]:
         body = resp.read().decode("utf-8", errors="ignore")
     out: dict[str, float] = {}
     for line in body.splitlines():
-        if line.startswith("querylens_kafka_consumer_lag") and not line.startswith("#"):
+        if line.startswith("plantrace_kafka_consumer_lag") and not line.startswith("#"):
             out["kafka_lag"] = max(out.get("kafka_lag", 0.0), float(line.rsplit(" ", 1)[-1]))
-        if line.startswith("querylens_duplicate_events_total") and not line.startswith("#"):
+        if line.startswith("plantrace_duplicate_events_total") and not line.startswith("#"):
             out["duplicates"] = float(line.rsplit(" ", 1)[-1])
-        if line.startswith("querylens_dlq_events_total") and not line.startswith("#"):
+        if line.startswith("plantrace_dlq_events_total") and not line.startswith("#"):
             out["dlq"] = float(line.rsplit(" ", 1)[-1])
-        if line.startswith("querylens_telemetry_persist_failures_total") and not line.startswith("#"):
+        if line.startswith("plantrace_telemetry_persist_failures_total") and not line.startswith("#"):
             out["persist_failures"] = float(line.rsplit(" ", 1)[-1])
     return out
 
@@ -107,30 +107,30 @@ def cleanup_old_benchmark_rows() -> None:
             text(
                 """
                 SELECT id
-                FROM querylens.query_fingerprints
+                FROM plantrace.query_fingerprints
                 WHERE normalized_query LIKE 'select benchmark_%'
                 """
             )
         ).scalars().all()
         if fp_ids:
             conn.execute(
-                text("DELETE FROM querylens.query_reports WHERE fingerprint_id = ANY(:fp_ids)"),
+                text("DELETE FROM plantrace.query_reports WHERE fingerprint_id = ANY(:fp_ids)"),
                 {"fp_ids": fp_ids},
             )
             conn.execute(
-                text("DELETE FROM querylens.query_regressions WHERE fingerprint_id = ANY(:fp_ids)"),
+                text("DELETE FROM plantrace.query_regressions WHERE fingerprint_id = ANY(:fp_ids)"),
                 {"fp_ids": fp_ids},
             )
             conn.execute(
-                text("DELETE FROM querylens.query_plans WHERE fingerprint_id = ANY(:fp_ids)"),
+                text("DELETE FROM plantrace.query_plans WHERE fingerprint_id = ANY(:fp_ids)"),
                 {"fp_ids": fp_ids},
             )
             conn.execute(
-                text("DELETE FROM querylens.query_metrics WHERE fingerprint_id = ANY(:fp_ids)"),
+                text("DELETE FROM plantrace.query_metrics WHERE fingerprint_id = ANY(:fp_ids)"),
                 {"fp_ids": fp_ids},
             )
             conn.execute(
-                text("DELETE FROM querylens.query_fingerprints WHERE id = ANY(:fp_ids)"),
+                text("DELETE FROM plantrace.query_fingerprints WHERE id = ANY(:fp_ids)"),
                 {"fp_ids": fp_ids},
             )
     engine.dispose()
@@ -141,8 +141,8 @@ def fetch_latencies(run_id: str) -> list[float]:
     q = text(
         """
         SELECT EXTRACT(EPOCH FROM (m.ingested_at - m.captured_at)) * 1000.0 AS lag_ms
-        FROM querylens.query_metrics m
-        JOIN querylens.query_fingerprints f ON f.id = m.fingerprint_id
+        FROM plantrace.query_metrics m
+        JOIN plantrace.query_fingerprints f ON f.id = m.fingerprint_id
         WHERE f.normalized_query LIKE :prefix
         """
     )
@@ -157,8 +157,8 @@ def fetch_count(run_id: str) -> int:
     q = text(
         """
         SELECT count(*)
-        FROM querylens.query_metrics m
-        JOIN querylens.query_fingerprints f ON f.id = m.fingerprint_id
+        FROM plantrace.query_metrics m
+        JOIN plantrace.query_fingerprints f ON f.id = m.fingerprint_id
         WHERE f.normalized_query LIKE :prefix
         """
     )

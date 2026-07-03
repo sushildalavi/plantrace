@@ -16,7 +16,7 @@ down_revision: str | None = "0002_v2_streaming"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-SCHEMA = "querylens"
+SCHEMA = "plantrace"
 
 
 def upgrade() -> None:

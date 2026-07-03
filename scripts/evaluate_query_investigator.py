@@ -671,27 +671,6 @@ def main() -> int:
         for case in output["cases"]:
             writer.writerow(case)
 
-    markdown_lines = [
-        "# Query Investigator Evaluation",
-        "",
-        f"- provider: {output['provider']}",
-        f"- golden cases tested: {output['golden_cases_tested']}",
-        f"- schema validity rate: {output['schema_validity_rate']}",
-        f"- evidence coverage rate: {output['evidence_coverage_rate']}",
-        f"- unsupported claim rate: {output['unsupported_claim_rate']}",
-        f"- recommendation relevance rate: {output['recommendation_relevance_rate']}",
-        f"- insufficient-evidence behavior: {output['insufficient_evidence_behavior']}",
-        f"- average latency ms: {output['average_report_generation_latency_ms']}",
-        "",
-        "| Case | Schema valid | Coverage | Unsupported claims | Recommendation relevant | Insufficient expected | Insufficient observed | Latency ms |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
-    ]
-    for case in output["cases"]:
-        markdown_lines.append(
-            f"| {case['case']} | {case['schema_valid']} | {case['evidence_coverage']:.2f} | {case['unsupported_claims']} | {case['recommendation_relevant']} | {case['insufficient_expected']} | {case['insufficient_observed']} | {case['latency_ms']:.2f} |"
-        )
-    (out_dir / "query_investigator_eval.md").write_text("\n".join(markdown_lines) + "\n", encoding="utf-8")
-
     print(json.dumps(output, indent=2))
     return 0
 

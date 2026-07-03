@@ -16,7 +16,7 @@ target_metadata = Base.metadata
 
 
 def include_object(obj, name, type_, reflected, compare_to):
-    if type_ == "table" and getattr(obj, "schema", None) != "querylens":
+    if type_ == "table" and getattr(obj, "schema", None) != "plantrace":
         return False
     return True
 
@@ -27,7 +27,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        version_table_schema="querylens",
+        version_table_schema="plantrace",
         include_schemas=True,
         include_object=include_object,
     )
@@ -45,7 +45,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            version_table_schema="querylens",
+            version_table_schema="plantrace",
             include_schemas=True,
             include_object=include_object,
         )

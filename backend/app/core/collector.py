@@ -180,7 +180,7 @@ SELECT
 FROM pg_stat_statements
 WHERE
     query NOT ILIKE '%pg_stat_statements%'
-    AND query NOT ILIKE '%querylens.%'
+    AND query NOT ILIKE '%plantrace.%'
     AND query NOT ILIKE '%information_schema%'
     AND query NOT ILIKE '%PREPARE%'
     AND query NOT ILIKE '%EXPLAIN%'

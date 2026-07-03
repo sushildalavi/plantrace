@@ -208,7 +208,6 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     name = args.artifact_name or f"plantrace_benchmark_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     json_path = output_dir / f"{name}.json"
-    md_path = output_dir / f"{name}.md"
 
     if args.dry_run:
         artifact = _pending_artifact(args, "dry-run requested; live collector was not contacted")
@@ -222,9 +221,8 @@ def main() -> None:
             artifact = _pending_artifact(args, str((live or {}).get("note", "live benchmark unavailable")))
 
     json_path.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    md_path.write_text(render_markdown(artifact) + "\n", encoding="utf-8")
     print(json_path)
-    print(md_path)
+    print(render_markdown(artifact))
 
 
 if __name__ == "__main__":
