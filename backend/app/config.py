@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+psycopg://querylens:querylens@db:5432/querylens"
+    SUPABASE_DATABASE_URL: str = ""
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
     DB_POOL_TIMEOUT: int = 30
@@ -51,6 +52,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def effective_database_url(self) -> str:
+        return self.SUPABASE_DATABASE_URL.strip() or self.DATABASE_URL
 
 
 settings = Settings()
